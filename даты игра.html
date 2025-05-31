@@ -1,0 +1,1647 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blitz Dates - Онлайн Вікторина</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1E1E1E;
+            --surface-light-color: #2a2a2a;
+            --text-color: #E0E0E0;
+            --text-secondary-color: #B0B0B0;
+            --accent-neon-blue: #00AEEF;
+            --accent-lime-green: #AFFF33;
+            --correct-color: #4CAF50;
+            --incorrect-color: #F44336;
+            --selected-color: #FFC107;
+            --border-radius: 8px;
+            --transition-speed: 0.3s;
+        }
+
+        body {
+            font-family: 'Roboto', 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 950px; /* Slightly wider for player panels */
+            margin: auto;
+        }
+
+        .screen {
+            background-color: var(--surface-color);
+            padding: 20px;
+            border-radius: var(--border-radius);
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.4);
+            margin-bottom: 20px;
+            text-align: center;
+            display: none; /* Hidden by default */
+            animation: fadeIn var(--transition-speed) ease-out;
+        }
+        .screen.active { display: block; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 174, 239, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 174, 239, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 174, 239, 0); }
+        }
+
+        h1, h2, h3 { color: #FFFFFF; margin-top: 0; }
+        h1 { font-size: 2.2em; margin-bottom: 25px; letter-spacing: 1px;}
+        h2 { font-size: 1.7em; margin-bottom: 20px; }
+        h3 { font-size: 1.4em; margin-bottom: 15px; }
+
+        label { display: block; margin-top: 15px; margin-bottom: 5px; font-weight: bold; color: var(--text-secondary-color); text-align: left; }
+        input[type="text"], input[type="password"], input[type="number"], select {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 6px;
+            border: 1px solid #333333;
+            background-color: #2C2C2C;
+            color: var(--text-color);
+            font-size: 1em;
+            box-sizing: border-box;
+        }
+        input[type="text"]::placeholder, input[type="password"]::placeholder { color: #666; }
+
+        button {
+            background-color: var(--accent-neon-blue);
+            color: var(--bg-color);
+            border: none;
+            padding: 12px 25px;
+            margin: 10px 5px;
+            border-radius: 6px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color var(--transition-speed), transform 0.1s, box-shadow var(--transition-speed);
+            box-shadow: 0px 2px 4px rgba(0,0,0,0.2);
+            min-width: 120px;
+        }
+        button:hover { background-color: var(--accent-lime-green); color:var(--bg-color); box-shadow: 0px 0px 15px var(--accent-lime-green); }
+        button:active { transform: scale(0.97); }
+        button:disabled { background-color: #555; color: #888; cursor: not-allowed; box-shadow: none; }
+        button.pulsating { animation: pulse 2s infinite; }
+
+        /* Header Profile */
+        .header-profile {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1001;
+        }
+        .profile-nickname-btn {
+            background-color: var(--surface-light-color);
+            color: var(--accent-neon-blue);
+            padding: 8px 15px;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-weight: bold;
+            border: 1px solid var(--accent-neon-blue);
+        }
+        .profile-dropdown {
+            display: none;
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background-color: var(--surface-color);
+            border: 1px solid #444;
+            border-radius: var(--border-radius);
+            padding: 15px;
+            width: 280px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+            text-align: left;
+        }
+        .profile-dropdown.active { display: block; }
+        .profile-dropdown h4 { margin-top: 0; color: var(--accent-lime-green); }
+        .profile-dropdown p { font-size: 0.9em; margin: 5px 0; }
+        .profile-dropdown ul { list-style: none; padding: 0; margin: 10px 0; max-height: 150px; overflow-y: auto; }
+        .profile-dropdown ul li { font-size: 0.85em; padding: 3px; border-bottom: 1px dashed #333; }
+        .profile-dropdown ul li:last-child { border-bottom: none; }
+
+        /* Lobby Screen */
+        .lobby-options button { display: block; width: 80%; margin: 15px auto; padding: 15px; font-size: 1.1em;}
+        
+        /* Create/Join Room Forms */
+        .form-section { border: 1px solid #444; padding: 15px; margin-top: 20px; border-radius: var(--border-radius); }
+        #roomListContainer { max-height: 200px; overflow-y: auto; border: 1px solid #444; padding: 5px; margin-top:10px; }
+        .room-list-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #333; cursor: pointer; }
+        .room-list-item:hover { background-color: var(--surface-light-color); }
+        .room-list-item.selected-room { background-color: var(--accent-neon-blue); color: var(--bg-color); }
+
+        /* Waiting Screen */
+        #waitingScreen .countdown { font-size: 3em; font-weight: bold; margin: 20px 0; color: var(--accent-lime-green); }
+
+        /* Match Screen */
+        .match-top-bar { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; }
+        .player-info { background-color: var(--surface-light-color); padding: 10px 15px; border-radius: var(--border-radius); width: calc(50% - 10px); box-sizing: border-box; margin-bottom: 10px; text-align:left; }
+        .player-info h3 { font-size: 1.2em; margin-bottom: 8px; color: var(--accent-neon-blue); }
+        .lives-container { display: flex; }
+        .life-heart { font-size: 1.6em; color: var(--incorrect-color); margin-right: 4px; transition: opacity var(--transition-speed), transform var(--transition-speed); }
+        .life-heart.lost { opacity: 0.2; transform: scale(0.8); }
+
+        .question-progress { text-align: center; font-size: 1.2em; margin-bottom: 15px; color: var(--text-secondary-color); }
+        .question-text-display { font-size: 1.5em; margin-bottom: 20px; padding: 20px; background-color: #222; border-radius: 6px; min-height: 80px; display: flex; align-items: center; justify-content: center; line-height: 1.4; }
+        .options-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .option-button { padding: 18px; font-size: 1.05em; text-align: left; width: 100%; box-sizing: border-box; border: 1px solid #444 }
+        .option-button.selected { background-color: var(--selected-color) !important; color: var(--bg-color) !important; font-weight: bold; border-color: var(--selected-color) !important;}
+        .option-button.correct { background-color: var(--correct-color) !important; color: white !important; border-color: var(--correct-color) !important;}
+        .option-button.wrong { background-color: var(--incorrect-color) !important; color: white !important; border-color: var(--incorrect-color) !important; opacity: 1 !important;}
+        .option-button.disabled-after-reveal:not(.correct):not(.selected) { opacity: 0.5; pointer-events: none; }
+
+
+        .timer-container { margin-bottom: 15px; }
+        .timer-bar-outer { width: 100%; height: 12px; background-color: #333; border-radius: 6px; overflow: hidden; }
+        .timer-bar-inner { height: 100%; width: 100%; background-color: var(--accent-lime-green); transition: width 0.1s linear; }
+        .timer-text { font-size: 1.2em; margin-top: 5px; color: var(--text-secondary-color); }
+        .brief-info-display { margin-top: 15px; padding: 10px; background-color: #222; border-radius: var(--border-radius); font-style: italic; color: var(--text-secondary-color); font-size: 0.95em;}
+
+        .match-bottom-bar { margin-top: 20px; border-top: 1px solid #333; padding-top: 15px; display:flex; justify-content:space-between; align-items:center; }
+        #matchTimerDisplay { font-weight: bold; font-size: 1.1em; }
+
+        /* Result Modal */
+        #resultModal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn var(--transition-speed) ease-out; }
+        .modal-content { background-color: var(--surface-color); padding: 30px; border-radius: var(--border-radius); box-shadow: 0 5px 15px rgba(0,0,0,0.5); width: 90%; max-width: 700px; text-align: center; max-height: 90vh; overflow-y: auto;}
+        #resultModal table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+        #resultModal th, #resultModal td { border: 1px solid #444; padding: 10px; text-align: left; }
+        #resultModal th { background-color: #2C2C2C; }
+        .modal-buttons { margin-top: 25px; }
+        #mistakesList { list-style: none; padding: 0; text-align: left; font-size: 0.9em; max-height: 150px; overflow-y: auto; background-color: #222; padding:10px; border-radius: var(--border-radius); margin-top: 10px;}
+        #mistakesList li { padding: 5px 0; border-bottom: 1px dashed #444; }
+        #mistakesList li:last-child { border-bottom: none; }
+        #mistakesList strong { color: var(--accent-lime-green); }
+        #mistakesList .user-answer { color: var(--incorrect-color); }
+        #mistakesList .correct-answer-info { color: var(--correct-color); }
+
+
+        #statusMessage { padding: 10px; margin-bottom: 15px; border-radius: var(--border-radius); font-weight: bold; display:none; }
+        #statusMessage.success { background-color: var(--correct-color); color: white; }
+        #statusMessage.error { background-color: var(--incorrect-color); color: white; }
+        #statusMessage.info { background-color: var(--accent-neon-blue); color: var(--bg-color); }
+
+        /* Placeholders */
+        #soloGameSettingsScreen .form-section, #createRoomForm .form-section, #joinRoomScreen .form-section { margin-top: 0; }
+        #chatContainer { display: none; }
+
+        @media (max-width: 768px) {
+            .player-info { width: 100%; }
+            .options-grid { grid-template-columns: 1fr; } /* Single column on smaller screens */
+        }
+    </style>
+</head>
+<body>
+    <div class="header-profile">
+        <button class="profile-nickname-btn" id="profileBtn">Профіль</button>
+        <div class="profile-dropdown" id="profileDropdown">
+            <h4>Профіль: <span id="profileDisplayNickname">Гість</span></h4>
+            <p>Загальний рахунок: <span id="profileTotalScore">0</span></p>
+            <p>Зіграно раундів: <span id="profileRoundsPlayed">0</span></p>
+            <p>Середня точність: <span id="profileAvgAccuracy">0</span>%</p>
+            <h5>Історія останніх матчів:</h5>
+            <ul id="profileMatchHistory"><li>Немає даних</li></ul>
+            <button id="logoutBtn">Вийти (змінити нік)</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <h1>Blitz Dates</h1>
+        <div id="statusMessage"></div>
+
+        <!-- Nickname Input Screen -->
+        <div id="nicknameScreen" class="screen active">
+            <h2>Вітаємо!</h2>
+            <label for="mainNicknameInput">Введіть ваш нікнейм:</label>
+            <input type="text" id="mainNicknameInput" placeholder="Ваш унікальний нікнейм">
+            <button id="continueToLobbyBtn">Продовжити</button>
+            <div>
+                <label for="wsAddressInputGlobal" style="font-size:0.9em; margin-top:30px;">Адреса WebSocket Сервера (напр., ws://localhost:8080):</label>
+                <input type="text" id="wsAddressInputGlobal" value="ws://localhost:8080" style="font-size:0.9em;">
+            </div>
+        </div>
+
+        <!-- Main Lobby Screen -->
+        <div id="lobbyScreen" class="screen">
+            <h2>Головне Лоббі</h2>
+            <div class="lobby-options">
+                <button id="showCreateRoomScreenBtn">Створити Кімнату</button>
+                <button id="showJoinRoomScreenBtn">Приєднатися до Кімнати</button>
+                <button id="startSoloGameBtn">Соло-режим</button>
+            </div>
+        </div>
+
+        <!-- Create Room Screen -->
+        <div id="createRoomScreen" class="screen">
+            <h2>Створити Нову Кімнату</h2>
+            <div class="form-section">
+                <label for="createRoomName">Назва кімнати:</label>
+                <input type="text" id="createRoomName" placeholder="Назва моєї кімнати">
+                <label for="createRoomPassword">Пароль (необов'язково):</label>
+                <input type="password" id="createRoomPassword" placeholder="Залиште пустим для відкритої кімнати">
+                <label for="createRoomTopic">Тема:</label>
+                <select id="createRoomTopic">
+                    <option value="all_ukraine_history">Історія України (Всі)</option>
+                    <option value="ancient_ukraine">Стародавня історія України</option>
+                    <option value="rus_ukraine">Русь-Україна</option>
+                    <option value="world_war_2">Друга світова війна (Україна)</option>
+                    <option value="modern_ukraine">Новітня історія України</option>
+                    <!-- Add more based on your data structure -->
+                </select>
+                <label for="createGameMode">Режим гри:</label>
+                <select id="createGameMode">
+                    <option value="basic">Basic (Подія -> Дата)</option>
+                    <option value="reverse">Reverse (Дата -> Подія)</option>
+                </select>
+                <label for="createLivesCount">Кількість життів:</label>
+                <select id="createLivesCount">
+                    <option value="3">3 життя</option>
+                    <option value="5">5 життів</option>
+                </select>
+            </div>
+            <button id="submitCreateRoomBtn">Створити</button>
+            <button class="back-to-lobby">Назад в Лоббі</button>
+        </div>
+        
+        <!-- Join Room Screen -->
+        <div id="joinRoomScreen" class="screen">
+            <h2>Приєднатися до Кімнати</h2>
+            <p>Завантаження списку кімнат... (потрібен сервер)</p>
+            <div id="roomListContainer">
+                <!-- <div class="room-list-item" data-room-id="ROOM123">Кімната Друга (1/2) <span class="room-status-topic">Тема: Історія</span> <span class="room-status-protected">Protected</span></div> -->
+            </div>
+             <div class="form-section" id="joinSelectedRoomForm" style="display:none;">
+                <h3 id="selectedRoomNameDisplay"></h3>
+                <label for="joinRoomPassword">Пароль (якщо потрібно):</label>
+                <input type="password" id="joinRoomPassword" placeholder="Пароль кімнати">
+                <button id="submitJoinRoomBtn">Увійти в Обрану Кімнату</button>
+            </div>
+            <button class="back-to-lobby">Назад в Лоббі</button>
+        </div>
+
+        <!-- Solo Game Settings Screen -->
+        <div id="soloGameSettingsScreen" class="screen">
+            <h2>Налаштування Соло-гри</h2>
+             <div class="form-section">
+                <label for="soloGameTopic">Тема:</label>
+                <select id="soloGameTopic">
+                    <option value="all_ukraine_history">Історія України (Всі)</option>
+                    <option value="ancient_ukraine">Стародавня історія України</option>
+                    <option value="rus_ukraine">Русь-Україна</option>
+                    <option value="world_war_2">Друга світова війна (Україна)</option>
+                    <option value="modern_ukraine">Новітня історія України</option>
+                </select>
+                <label for="soloGameMode">Режим гри:</label>
+                <select id="soloGameMode">
+                    <option value="basic">Basic (Подія -> Дата)</option>
+                    <option value="reverse">Reverse (Дата -> Подія)</option>
+                </select>
+                <label for="soloLivesCount">Кількість життів:</label>
+                <select id="soloLivesCount">
+                    <option value="3">3 життя</option>
+                    <option value="5">5 життів</option>
+                </select>
+                <label for="soloQuestionCount">Кількість питань:</label>
+                <input type="number" id="soloQuestionCount" value="10" min="5" max="30">
+            </div>
+            <button id="submitStartSoloGameBtn">Почати Соло-гру</button>
+            <button class="back-to-lobby">Назад в Лоббі</button>
+        </div>
+
+        <!-- Waiting Screen (Multiplayer) -->
+        <div id="waitingScreen" class="screen">
+            <h2>Очікування гравців...</h2>
+            <p>ID Кімнати: <strong id="waitingRoomIdDisplay"></strong> (поділіться з другом)</p>
+            <div id="waitingPlayersList">
+                <!-- Player nicknames will appear here -->
+            </div>
+            <p id="waitingStatusText">Очікуємо другого гравця...</p>
+            <div id="waitingCountdown" class="countdown" style="display:none;">3</div>
+            <button id="cancelWaitingBtn">Скасувати створення / Вийти</button>
+        </div>
+        
+        <!-- Match Screen -->
+        <div id="matchScreen" class="screen">
+            <div class="match-top-bar">
+                <div class="player-info" id="playerInfoLocal">
+                    <h3 id="localPlayerName">Гравець 1</h3>
+                    <p>Рахунок: <span id="localPlayerScore">0</span></p>
+                    <div class="lives-container" id="localPlayerLives"></div>
+                </div>
+                <div class="player-info" id="playerInfoOpponent">
+                    <h3 id="opponentPlayerName">Гравець 2</h3>
+                    <p>Рахунок: <span id="opponentPlayerScore">0</span></p>
+                    <div class="lives-container" id="opponentPlayerLives"></div>
+                </div>
+            </div>
+
+            <p class="question-progress" id="questionNumberDisplay">Питання 0 з 0</p>
+            <div class="question-text-display" id="questionTextEl">Завантаження питання...</div>
+            <div class="options-grid" id="optionsContainerEl"></div>
+            <div class="brief-info-display" id="briefInfoEl" style="display:none;"></div>
+
+
+            <div class="timer-container">
+                <div class="timer-bar-outer">
+                    <div class="timer-bar-inner" id="questionTimerFill"></div>
+                </div>
+                <p class="timer-text">Залишилось часу: <span id="questionTimeLeftDisplay">15</span>с</p>
+            </div>
+
+            <div class="match-bottom-bar">
+                <p>Час матчу: <span id="matchTimerDisplay">00:00</span></p>
+                <button id="leaveMatchBtn">Покинути Матч</button>
+            </div>
+        </div>
+
+        <!-- Result Modal -->
+        <div id="resultModal" class="screen">
+            <div class="modal-content">
+                <h2 id="resultModalTitle">Результати Раунду</h2>
+                <table id="resultTable">
+                    <thead>
+                        <tr>
+                            <th>Гравець</th>
+                            <th>Очки</th>
+                            <th>Правильно</th>
+                            <th>Неправильно</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody"></tbody>
+                </table>
+                <div id="mistakesContainer" style="display:none;">
+                    <h4>Ваші помилки:</h4>
+                    <ul id="mistakesList"></ul>
+                </div>
+                <div class="modal-buttons">
+                    <button id="rematchBtn">Реванш</button>
+                    <button id="newTopicBtnModal" disabled>Нова Тема (не реалізовано)</button>
+                    <button id="exitToLobbyFromModalBtn">Вийти в Лоббі</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Chat placeholder -->
+        <div id="chatContainer"></div>
+    </div>
+
+    <script>
+        // --- 0. EMBEDDED HISTORICAL DATA (for demo and solo mode) ---
+        const ALL_HISTORICAL_EVENTS = [
+            { topic_key: "ancient_ukraine", topic_readable: "Стародавня історія України", date: "IV- середина III тис. до н.е.", event: "розселення племен трипільської та середньостогівської культур", brief: "Трипільська культура відома своєю керамікою та великими поселеннями." },
+            { topic_key: "ancient_ukraine", topic_readable: "Стародавня історія України", date: "VIII-VI ст. до н.е.", event: "Велика грецька колонізація", brief: "Грецькі міста-колонії виникли на узбережжі Чорного та Азовського морів." },
+            { topic_key: "ancient_ukraine", topic_readable: "Стародавня історія України", date: "V-VII ст.", event: "Велике розселення слов'ян", brief: "Слов'янські племена розселилися на значній території Східної Європи." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "860 р.", event: "похід Аскольда на Константинополь, укладення першого відомого договору Русі з Візантією", brief: "Перший зафіксований похід русів на Візантію." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "907, 911, 941, 944 рр.", event: "походи князів на Константинополь", brief: "Серія військових походів руських князів на столицю Візантії." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "882 р.", event: "об'єднання північних та південних руських земель Олегом", brief: "Князь Олег захопив Київ і проголосив його 'матір'ю міст руських'." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "988 р.", event: "запровадження християнства як державної релігії", brief: "Князь Володимир Великий охрестив Русь, прийнявши християнство візантійського обряду." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "1019-1054 pp.", event: "князювання Ярослава Мудрого в м. Київ", brief: "Період розквіту Київської Русі, створення 'Руської Правди'." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "1036 р.", event: "розгром печенігів князем Ярославом Мудрим", brief: "Вирішальна перемога над печенігами, яка забезпечила мир на південних кордонах Русі." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "1097 р.", event: "Любецький з'їзд (снем) князів", brief: "Спроба припинити міжусобиці, проголошено принцип 'кождо да держить отчину свою'." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "1113 р.", event: "укладення «Повісті минулих літ»; початок правління Володимира Мономаха в м. Київ", brief: "Нестор Літописець завершив першу редакцію літопису; Володимир Мономах став великим князем київським." },
+            { topic_key: "rus_ukraine", topic_readable: "Русь-Україна", date: "1187 р.", event: "перша згадка назви «Україна» в писемних джерелах, створення «Слова о полку Ігоревім»", brief: "Назва 'Україна' вперше згадана в Київському літописі; 'Слово о полку Ігоревім' - видатна пам'ятка літератури." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1199 р.", event: "утворення Галицько-Волинської держави", brief: "Роман Мстиславич об'єднав Галицьке та Волинське князівства." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1223 р.", event: "битва біля р. Калка", brief: "Перше зіткнення руських князів з монголами, що завершилося поразкою русько-половецьких військ." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1238 - 1264 pp.", event: "правління Данила Романовича", brief: "Князь, а згодом король Русі, засновник Львова, вів боротьбу проти монгольського панування." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1240 р.", event: "захоплення м. Київ монголами", brief: "Монгольські війська під проводом Батия зруйнували Київ." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1245 р.", event: "битва біля м. Ярослав; поїздка Данила Романовича в Золоту Орду", brief: "Данило Галицький розгромив угорсько-польські війська; змушений був визнати зверхність Золотої Орди." },
+            { topic_key: "galicia_volhynia_mongol", topic_readable: "Королівство Руське. Монгольська навала", date: "1253 р.", event: "коронування Данила Романовича", brief: "Данило Галицький отримав королівську корону від Папи Римського Інокентія IV." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "1362 р.", event: "битва біля р. Сині Води", brief: "Литовсько-руське військо розгромило татар, звільнивши значну частину українських земель." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "1385 р.", event: "укладення Кревської унії", brief: "Угода між Польщею та Великим князівством Литовським про династичний союз." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "40-і рр. XV ст.", event: "утворення Кримського ханства", brief: "Кримське ханство виокремилося зі складу Золотої Орди." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "1478 р.", event: "визнання Кримським ханством васальної залежності від Османської імперії", brief: "Кримське ханство стало васалом Османської імперії." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "1489 р.", event: "перша згадка про козаків у літописних джерелах", brief: "Польський хроніст Марцін Бельський вперше згадує козаків." },
+            { topic_key: "rus_principalities_crimean_khanate", topic_readable: "Руські князівства. Кримське ханство (XIV-XVI ст.)", date: "1514 р.", event: "битва під Оршею, розгром війська московитів", brief: "Об'єднане військо Великого князівства Литовського та Польського королівства розгромило московське військо." },
+            { topic_key: "ukr_lands_poland_lithuania_16c", topic_readable: "Українські землі у Речі Посполитій (2 пол. XVI ст.)", date: "1556 — 1561 р.", event: "створення Пересопницького Євангелія", brief: "Визначна рукописна пам'ятка, переклад Євангелія староукраїнською мовою." },
+            { topic_key: "ukr_lands_poland_lithuania_16c", topic_readable: "Українські землі у Речі Посполитій (2 пол. XVI ст.)", date: "1556 р.", event: "заснування князем Д. Вишневецьким на о. Мала Хортиця першої Січі", brief: "Дмитро Вишневецький (Байда) заснував укріплення, яке вважається прототипом Запорозької Січі." },
+            { topic_key: "ukr_lands_poland_lithuania_16c", topic_readable: "Українські землі у Речі Посполитій (2 пол. XVI ст.)", date: "1569 р.", event: "Люблінська унія; утворення Речі Посполитої", brief: "Об'єднання Польського королівства та Великого князівства Литовського в єдину державу – Річ Посполиту." },
+            { topic_key: "ukr_lands_poland_lithuania_16c", topic_readable: "Українські землі у Речі Посполитій (2 пол. XVI ст.)", date: "1586 р.", event: "утворення першої братської (слов'яно-греко-латинської) школи у м. Львів", brief: "Львівське Успенське братство заснувало школу, що стала важливим осередком освіти та культури." },
+            { topic_key: "ukr_lands_poland_lithuania_16c", topic_readable: "Українські землі у Речі Посполитій (2 пол. XVI ст.)", date: "1596 р.", event: "Берестейська унія; утворення УГКЦ", brief: "Частина православного духовенства визнала верховенство Папи Римського, утворивши Українську Греко-Католицьку Церкву." },
+            { topic_key: "ukr_lands_poland_lithuania_17c_1half", topic_readable: "Українські землі у Речі Посполитій (1 пол. XVII ст.)", date: "1618 р.", event: "похід козаків під проводом гетьмана П. Конашевича-Сагайдачного на москву", brief: "Козацьке військо взяло участь у польсько-московській війні на боці Речі Посполитої." },
+            { topic_key: "ukr_lands_poland_lithuania_17c_1half", topic_readable: "Українські землі у Речі Посполитій (1 пол. XVII ст.)", date: "1621 р.", event: "Хотинська битва", brief: "Козацько-польське військо зупинило наступ Османської імперії під Хотином." },
+            { topic_key: "ukr_lands_poland_lithuania_17c_1half", topic_readable: "Українські землі у Речі Посполитій (1 пол. XVII ст.)", date: "1625 р.", event: "Куруківська угода", brief: "Угода між козацькою старшиною та польським урядом, що обмежувала козацький реєстр." },
+            { topic_key: "ukr_lands_poland_lithuania_17c_1half", topic_readable: "Українські землі у Речі Посполитій (1 пол. XVII ст.)", date: "1632 р.", event: "\"Пункти для заспокоєння руського народу\", утворення Київської колегії", brief: "Владислав IV Ваза видав 'Пункти', що легалізували православну церкву; Петро Могила заснував Київську колегію." },
+            { topic_key: "ukr_lands_poland_lithuania_17c_1half", topic_readable: "Українські землі у Речі Посполитій (1 пол. XVII ст.)", date: "1637 - 1638 pp.", event: "повстання під проводом Павла Павлюка, Якова Острянина, Дмитра Гуні", brief: "Серія козацько-селянських повстань проти польського панування, жорстоко придушених." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1648 р.", event: "Жовтоводська, Корсунська та Пилявецька битви", brief: "Перші переможні битви козацького війська під проводом Богдана Хмельницького над польською армією." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1649 р.", event: "Зборівська битва, Зборівський договір", brief: "Битва, що призвела до укладення Зборівського договору, який визнавав автономію Гетьманщини." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1651 р.", event: "Берестецька битва, Білоцерківський договір", brief: "Поразка козацького війська під Берестечком та укладення невигідного Білоцерківського договору." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1652 р.", event: "Батозька битва", brief: "Блискуча перемога козаків над польським військом, помста за Берестечко." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1653 р.", event: "Жванецька облога, Кам'янецький договір", brief: "Облога польського війська під Жванцем, що змусила Польщу піти на поступки." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1654 р.", event: "Переяславська рада, \"Березневі статті\"", brief: "Укладення військово-політичного союзу Гетьманщини з Московським царством." },
+            { topic_key: "khmelnytsky_uprising", topic_readable: "Національно-визвольна війна (Б. Хмельницький)", date: "1656 р.", event: "московсько-польське Віленське перемир'я", brief: "Перемир'я між Москвою та Польщею, укладене без участі української сторони." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1658 р.", event: "Гадяцький договір", brief: "Спроба гетьмана Івана Виговського створити Велике князівство Руське у складі Речі Посполитої." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1659 р.", event: "Конотопська битва", brief: "Перемога козацько-татарського війська Івана Виговського над московською армією." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1667 р.", event: "Андрусівське перемир'я", brief: "Перемир'я між Московським царством і Річчю Посполитою, яке розділило Україну по Дніпру." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1669 р.", event: "Корсунська угода, визнання Правобережною Гетьманщиною протекторату Османської імперії", brief: "Гетьман Петро Дорошенко уклав союз з Османською імперією." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1681 р.", event: "Бахчисарайський мирний договір", brief: "Договір між Московським царством та Османською імперією, що закріпив поділ України." },
+            { topic_key: "cossack_ukraine_late_17c", topic_readable: "Козацька Україна (кін. 50-80-х рр. XVII ст.)", date: "1686 р.", event: "\"Вічний мир\" між московським царством і Річчю Посполитою, підпорядкування Київської митрополії московському патріархатові", brief: "Договір, що остаточно закріпив поділ України; Київська митрополія перейшла під юрисдикцію Московського патріархату." },
+            { topic_key: "ukr_lands_late17_early18c", topic_readable: "Українські землі (кін. XVII — 1 пол. XVIII ст.)", date: "1708 р.", event: "українсько-шведський союз, зруйнування Батурина", brief: "Гетьман Іван Мазепа уклав союз зі Швецією; московські війська зруйнували гетьманську столицю Батурин." },
+            { topic_key: "ukr_lands_late17_early18c", topic_readable: "Українські землі (кін. XVII — 1 пол. XVIII ст.)", date: "1709 р.", event: "зруйнування російськими військами Чортомлицької Січі; Полтавська битва", brief: "Царські війська зруйнували Запорозьку Січ; вирішальна битва Північної війни, поразка шведсько-українських сил." },
+            { topic_key: "ukr_lands_late17_early18c", topic_readable: "Українські землі (кін. XVII — 1 пол. XVIII ст.)", date: "1710 р.", event: "Конституція Пилипа Орлика", brief: "'Пакти й Конституції прав і вольностей Війська Запорозького' – перша українська конституція." },
+            { topic_key: "ukr_lands_late17_early18c", topic_readable: "Українські землі (кін. XVII — 1 пол. XVIII ст.)", date: "1713 р.", event: "ліквідація козацтва на Правобережній Україні", brief: "Польський сейм ухвалив рішення про ліквідацію козацького устрою на Правобережжі." },
+            { topic_key: "ukr_lands_late17_early18c", topic_readable: "Українські землі (кін. XVII — 1 пол. XVIII ст.)", date: "1734 р.", event: "заснування Нової (Підпільненської) Січі", brief: "Запорожці заснували нову Січ на річці Підпільній." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1764 р.", event: "остаточна ліквідація гетьманства", brief: "Катерина II скасувала посаду гетьмана, посиливши централізацію Російської імперії." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1768 р.", event: "Коліївщина", brief: "Велике гайдамацьке повстання на Правобережній Україні проти польського панування." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1775 р.", event: "остаточна ліквідація Запорозької Січі", brief: "За наказом Катерини II російські війська зруйнували Запорозьку Січ." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1780 — 1782 pp.", event: "ліквідація особистої залежності селян в Австрійській імперії", brief: "Імператор Йосиф II провів реформи, що полегшили становище селянства в Галичині." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1783 р.", event: "закріпачення селян Лівобережної та Слобідської України", brief: "Указом Катерини II було остаточно юридично оформлене кріпосне право на цих територіях." },
+            { topic_key: "ukr_lands_2half_18c", topic_readable: "Українські землі (2 пол. XVIII ст.)", date: "1783 р.", event: "підкорення російською імперією Кримського ханства", brief: "Російська імперія анексувала Кримське ханство." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1798 р.", event: "вихід друком \"Енеїди\" Івана Котляревського", brief: "Видання 'Енеїди' започаткувало нову українську літературу, написану народною мовою." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "грудень 1825 — січень 1826 pp.", event: "повстання Чернігівського полку", brief: "Виступ декабристів в Україні, що був частиною загальноросійського повстання." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1828 р.", event: "ліквідація Задунайської Січі", brief: "Задунайська Січ була ліквідована турецьким урядом після переходу частини козаків на бік Росії." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1830 — 1831 pp.", event: "польське визвольне повстання", brief: "Повстання проти російського панування, яке охопило і Правобережну Україну." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1840 р.", event: "перше видання \"Кобзаря\" Т. Шевченка", brief: "Вихід збірки віршів Тараса Шевченка, що мала величезний вплив на українську культуру." },
+            { topic_key: "ukr_lands_russian_empire_late18_early19c", topic_readable: "Українські землі в Російській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1846-1847 pp.", event: "діяльність Кирило-Мефодіївського братства", brief: "Таємна політична організація української інтелігенції, що ставила за мету національне визволення." },
+            { topic_key: "ukr_lands_austrian_empire_late18_early19c", topic_readable: "Українські землі в Австрійській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1816 pp.", event: "створення освітнього товариства галицьких греко-католицьких священиків", brief: "Товариство сприяло розвитку української освіти та культури в Галичині." },
+            { topic_key: "ukr_lands_austrian_empire_late18_early19c", topic_readable: "Українські землі в Австрійській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1833-1837 pp.", event: "діяльність \"Руської трійці\"", brief: "Літературне угруповання (М. Шашкевич, І. Вагилевич, Я. Головацький), що започаткувало національне відродження в Галичині." },
+            { topic_key: "ukr_lands_austrian_empire_late18_early19c", topic_readable: "Українські землі в Австрійській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1837 р.", event: "видання \"Русалки Дністрової\"", brief: "Альманах, виданий 'Руською трійцею', що став маніфестом українського романтизму в Галичині." },
+            { topic_key: "ukr_lands_austrian_empire_late18_early19c", topic_readable: "Українські землі в Австрійській імперії (кін. XVIII — 1 пол. XIX ст.)", date: "1848 р.", event: "скасування панщини в Галичині, створення Головної Руської Ради, видання першої українськомовної газети «Зоря Галицька»", brief: "Важливі події 'Весни народів' в Галичині, що сприяли українському національному руху." },
+            { topic_key: "culture_ukr_late18_1half19c", topic_readable: "Культура України (кін. XVIII – 1 пол. XIX ст.)", date: "1805 р.", event: "відкриття університету в Харкові", brief: "За ініціативи В. Каразіна було засновано Харківський університет." },
+            { topic_key: "culture_ukr_late18_1half19c", topic_readable: "Культура України (кін. XVIII – 1 пол. XIX ст.)", date: "1834 р.", event: "відкриття університету в Києві", brief: "Засновано Київський університет Святого Володимира." },
+            { topic_key: "culture_ukr_late18_1half19c", topic_readable: "Культура України (кін. XVIII – 1 пол. XIX ст.)", date: "1839 р.", event: "ліквідація царською владою греко-католицької церкви на Правобережжі", brief: "Уніатська церква на Правобережній Україні була примусово приєднана до Російської православної церкви." },
+            { topic_key: "ukr_lands_russian_empire_2half19c", topic_readable: "Українські землі в Російській імперії (2 пол. XIX ст.)", date: "19 лютого 1861 р.", event: "царський маніфест про скасування кріпосного права в російській імперії", brief: "Реформа, що звільнила селян від особистої залежності, але зберегла поміщицьке землеволодіння." },
+            { topic_key: "ukr_lands_russian_empire_2half19c", topic_readable: "Українські землі в Російській імперії (2 пол. XIX ст.)", date: "1863 р.", event: "Валуєвський циркуляр", brief: "Таємне розпорядження міністра внутрішніх справ П. Валуєва про обмеження видання книг українською мовою." },
+            { topic_key: "ukr_lands_russian_empire_2half19c", topic_readable: "Українські землі в Російській імперії (2 пол. XIX ст.)", date: "1863-1864 pp.", event: "польське національно-визвольне повстання", brief: "Чергове польське повстання, яке також охопило частину українських земель." },
+            { topic_key: "ukr_lands_russian_empire_2half19c", topic_readable: "Українські землі в Російській імперії (2 пол. XIX ст.)", date: "1876 р.", event: "Емський указ", brief: "Указ Олександра II, що забороняв друкування книг українською мовою та її використання в публічній сфері." },
+            { topic_key: "ukr_lands_austro_hungary_2half19c", topic_readable: "Українські землі в Австро-Угорщині (2 пол. XIX ст.)", date: "1868 р.", event: "створення у Львові товариства \"Просвіта\"", brief: "Культурно-освітня організація, що відіграла важливу роль у поширенні освіти та національної свідомості." },
+            { topic_key: "ukr_lands_austro_hungary_2half19c", topic_readable: "Українські землі в Австро-Угорщині (2 пол. XIX ст.)", date: "1873 р.", event: "створення у Львові Літературного товариства ім. Т. Шевченка (від 1892 р. - Наукового товариства ім. Т. Шевченка)", brief: "Важливий науковий та культурний центр, що став прообразом української академії наук." },
+            { topic_key: "ukr_lands_austro_hungary_2half19c", topic_readable: "Українські землі в Австро-Угорщині (2 пол. XIX ст.)", date: "1890 р.", event: "створення Русько-української радикальної партії", brief: "Перша українська політична партія сучасного типу, заснована І. Франком та М. Павликом." },
+            { topic_key: "ukr_lands_austro_hungary_2half19c", topic_readable: "Українські землі в Австро-Угорщині (2 пол. XIX ст.)", date: "1899 р.", event: "створення Української Національно-демократичної партії та Української соціал-демократичної партії", brief: "Поява нових українських політичних партій в Галичині." },
+            { topic_key: "culture_ukr_2half19_early20c", topic_readable: "Культура України (2 пол. XIX – поч. XX ст.)", date: "1865 р.", event: "відкриття Новоросійського університету", brief: "Засновано університет в Одесі (Новоросійський університет)." },
+            { topic_key: "culture_ukr_2half19_early20c", topic_readable: "Культура України (2 пол. XIX – поч. XX ст.)", date: "1875 р.", event: "відкриття Чернівецького університету", brief: "Засновано університет у Чернівцях, важливий освітній центр Буковини." },
+            { topic_key: "ukr_lands_russian_empire_1900_1914", topic_readable: "Українські землі в Російській імперії (1900–1914 рр.)", date: "1900 р.", event: "утворення Революційної української партії (РУП)", brief: "Перша українська політична партія в Наддніпрянській Україні, що висунула гасло самостійної України." },
+            { topic_key: "ukr_lands_russian_empire_1900_1914", topic_readable: "Українські землі в Російській імперії (1900–1914 рр.)", date: "1905 р.", event: "створення першої в Наддіпрянській Україні \"Просвіти\"", brief: "Відновлення діяльності 'Просвіт' після революційних подій 1905 року." },
+            { topic_key: "ukr_lands_russian_empire_1900_1914", topic_readable: "Українські землі в Російській імперії (1900–1914 рр.)", date: "1908 р.", event: "створення Товариства українських поступовців (ТУП)", brief: "Ліберально-демократична організація, що об'єднала українську інтелігенцію Наддніпрянщини." },
+            { topic_key: "ukr_lands_austro_hungary_1900_1914", topic_readable: "Українські землі в Австро-Угорщині (1900–1914 рр.)", date: "1900 р.", event: "обрання Андрея Шептицького митрополитом УГКЦ", brief: "Андрей Шептицький очолив Українську Греко-Католицьку Церкву, ставши її видатним діячем." },
+            { topic_key: "ukr_lands_austro_hungary_1900_1914", topic_readable: "Українські землі в Австро-Угорщині (1900–1914 рр.)", date: "1907 р.", event: "впровадження в Австро-Угорській імперії загального виборчого права для чоловіків", brief: "Реформа виборчої системи, що дозволила українцям збільшити своє представництво в парламенті." },
+            { topic_key: "ukraine_ww1", topic_readable: "Україна в роки Першої світової війни", date: "серпень 1914 р.", event: "утворення Головної української ради, формування легіону Українських січових стрільців, створення Союзу визволення України", brief: "Створення українських політичних та військових організацій на початку Першої світової війни." },
+            { topic_key: "ukraine_ww1", topic_readable: "Україна в роки Першої світової війни", date: "1914 р.", event: "Галицька битва", brief: "Велика битва на Східному фронті, внаслідок якої російські війська окупували Галичину." },
+            { topic_key: "ukraine_ww1", topic_readable: "Україна в роки Першої світової війни", date: "1915 р.", event: "утворення Загальної української ради", brief: "Об'єднання українських політичних сил в Австро-Угорщині." },
+            { topic_key: "ukraine_ww1", topic_readable: "Україна в роки Першої світової війни", date: "1916 р.", event: "Брусиловський прорив", brief: "Успішний наступ російських військ на Південно-Західному фронті." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "березень 1917 р.", event: "утворення Української Центральної Ради (УЦР)", brief: "Створення представницького органу українського народу на чолі з М. Грушевським." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "квітень 1917 р.", event: "Всеукраїнський Національний конгрес", brief: "З'їзд представників українських організацій, що підтримав УЦР та курс на автономію України." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "червень 1917 р.", event: "І Універсал УЦР", brief: "Проголошення автономії України у складі федеративної Росії." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "липень 1917 р.", event: "II Універсал УЦР", brief: "Компромісний документ, що відкладав проголошення автономії до Всеросійських установчих зборів." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "листопад 1917 р.", event: "III Універсал УЦР", brief: "Проголошення Української Народної Республіки (УНР) у складі федеративної Росії." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "9 (22) січня 1918 р.", event: "IV Універсал УЦР, проголошення незалежності УНР", brief: "Проголошення повної державної незалежності Української Народної Республіки." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "січень 1918 р.", event: "бій біля станції Крути", brief: "Героїчний бій українських студентів та гімназистів проти більшовицьких військ." },
+            { topic_key: "ukr_revolution_start", topic_readable: "Початок Української революції", date: "січень (лютий) 1918 р.", event: "Берестейський мирний договір між УНР та державами Четверного союзу", brief: "УНР визнана незалежною державою країнами Центрального блоку." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "29 квітня 1918 р.", event: "державний переворот і прихід до влади П. Скоропадського", brief: "Розпуск УЦР та проголошення Української Держави на чолі з гетьманом Павлом Скоропадським." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "1 листопада 1918 р.", event: "\"Листопадовий зрив\" у Львові", brief: "Українське повстання у Львові, що призвело до проголошення ЗУНР." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "13 листопада 1918 р.", event: "проголошення Західноукраїнської Народної Республіки", brief: "Офіційне проголошення незалежності Західноукраїнської Народної Республіки (ЗУНР)." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "листопад 1918 р.", event: "заснування Української академії наук", brief: "За гетьмана П. Скоропадського була заснована Українська академія наук на чолі з В. Вернадським." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "14 листопада 1918 р.", event: "утворення Директорії", brief: "Орган для керівництва повстанням проти гетьмана Скоропадського на чолі з В. Винниченком та С. Петлюрою." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "22 січня 1919 р.", event: "проголошення Акта злуки УНР та ЗУНР", brief: "Урочисте об'єднання Української Народної Республіки та Західноукраїнської Народної Республіки в соборну Україну." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "грудень 1919 – травень 1920 pp.", event: "перший \"Зимовий похід\" військ УНР", brief: "Рейд Армії УНР тилами денікінських та більшовицьких військ." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "квітень 1920 р.", event: "Варшавська Угода", brief: "Союзний договір між УНР (С. Петлюра) та Польщею (Ю. Пілсудський) для спільної боротьби проти більшовиків." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "березень 1921 р.", event: "Ризький мирний договір", brief: "Договір між Польщею, радянською Росією та радянською Україною, що закріпив поділ українських земель." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "1921 р.", event: "утворення Української автокефальної православної церкви (УАПЦ)", brief: "Створення незалежної від Московського патріархату української православної церкви." },
+            { topic_key: "ukr_revolution_expansion", topic_readable: "Розгортання Української революції", date: "листопад 1921 р.", event: "Другий \"Зимовий похід\" армії УНР", brief: "Остання спроба Армії УНР відновити збройну боротьбу за незалежність, завершилася поразкою." },
+            { topic_key: "ussr_totalitarian_establishment", topic_readable: "Встановлення тоталітарного режиму в Україні", date: "1921-1923 рр.", event: "масовий голод в Україні", brief: "Перший голод, спричинений політикою 'воєнного комунізму' та посухою." },
+            { topic_key: "ussr_totalitarian_establishment", topic_readable: "Встановлення тоталітарного режиму в Україні", date: "1922 р.", event: "входження УСРР до складу СРСР", brief: "Українська Соціалістична Радянська Республіка стала однією із засновниць Союзу Радянських Соціалістичних Республік." },
+            { topic_key: "ussr_totalitarian_establishment", topic_readable: "Встановлення тоталітарного режиму в Україні", date: "1923 р.", event: "початок політики \"українізації\" / \"коренізації\" в УСРР", brief: "Політика, спрямована на залучення українців до радянського будівництва та розвиток української мови та культури." },
+            { topic_key: "ussr_totalitarian_establishment", topic_readable: "Встановлення тоталітарного режиму в Україні", date: "1925 р.", event: "проголошення курсу на індустріалізацію", brief: "XIV з'їзд ВКП(б) проголосив курс на прискорений розвиток промисловості." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1928/1929-1932 рр.", event: "перша п'ятирічка", brief: "План форсованого розвитку народного господарства СРСР." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1928 р.", event: "судовий процес у Шахтинській справі", brief: "Сфабрикований судовий процес над інженерно-технічними працівниками Донбасу, початок масових репресій." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1929 р.", event: "початок насильницької колективізації", brief: "Примусове об'єднання селянських господарств у колгоспи, що супроводжувалося 'розкуркуленням'." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1930 р.", event: "судовий процес у справі Спілки визволення України (СВУ)", brief: "Показовий судовий процес над представниками української інтелігенції, звинуваченими в антирадянській діяльності." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1932–1933 рр.", event: "Голодомор в Україні", brief: "Масовий штучний голод, організований радянською владою, що призвів до мільйонних жертв." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1934 р.", event: "перенесення столиці УСРР з Харкова до Києва", brief: "Київ знову став столицею радянської України." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1937 р.", event: "ухвалення Конституції УРСР", brief: "Нова конституція, що закріплювала 'перемогу соціалізму' в Україні." },
+            { topic_key: "ussr_totalitarian_bolshevik", topic_readable: "Утвердження більшовицького тоталітарного режиму", date: "1937-1938 pp.", event: "\"Великий терор\"", brief: "Період масових політичних репресій та чисток в СРСР, що забрав життя мільйонів людей." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1920 р.", event: "підписання Бессарабського протоколу, визнання країнами Антанти входження Бессарабії до складу Румунії", brief: "Міжнародне визнання анексії Бессарабії Румунією." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1923 р.", event: "визнання країнами Антанти входження Східної Галичини до складу Польщі; саморозпуск уряду ЗУНР", brief: "Рада послів Антанти остаточно передала Східну Галичину Польщі; уряд ЗУНР в екзилі саморозпустився." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1925 р.", event: "утворення Українського національно демократичного об'єднання (УНДО)", brief: "Найбільша українська політична партія в міжвоєнній Польщі." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1929 р.", event: "утворення ОУН", brief: "Створення Організації Українських Націоналістів на чолі з Є. Коновальцем." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1930 р.", event: "проведення польською владою акції \"пацифікації\"", brief: "Масові репресії польської влади проти українського населення Галичини." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "1938 р.", event: "надання автономії Підкарпатській Русі у складі Чехо-Словаччини", brief: "Закарпаття отримало автономний статус внаслідок Мюнхенської угоди." },
+            { topic_key: "western_ukr_interwar", topic_readable: "Західноукраїнські землі в міжвоєнний період", date: "15 березня 1939 р.", event: "проголошення незалежності Карпатської України", brief: "Короткочасне існування незалежної держави на Закарпатті на чолі з А. Волошиним." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "23 серпня 1939 р.", event: "радянсько-німецький пакт про ненапад (\"пакт Молотова-Ріббентропа\")", brief: "Договір між СРСР та нацистською Німеччиною з таємним протоколом про поділ сфер впливу." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "1 вересня 1939 р.", event: "початок Другої світової війни", brief: "Напад Німеччини на Польщу, що ознаменував початок найкривавішої війни в історії людства." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "17 вересня 1939 р.", event: "вторгнення Червоної армії на територію Західної України", brief: "Радянські війська окупували Західну Україну." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "червень 1940 р.", event: "вторгнення Червоної армії на територію Бессарабії та Північної Буковини", brief: "СРСР анексував ці території, що належали Румунії." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "22 червня 1941 р.", event: "напад Німеччини на СРСР", brief: "Початок німецько-радянської війни." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "30 червня 1941 р.", event: "проголошення Акта відновлення Української Держави", brief: "ОУН(б) на чолі зі Степаном Бандерою проголосила у Львові відновлення незалежності України." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "14 жовтня 1942 р.", event: "створення Української повстанської армії (УПА)", brief: "Формальна дата створення УПА, що вело боротьбу за незалежність України." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "грудень 1942 р.", event: "початок вигнання нацистських загарбників з України", brief: "Перші населені пункти України були звільнені Червоною армією." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "6 листопада 1943 р.", event: "визволення Києва від нацистських окупантів", brief: "Червона армія звільнила столицю України внаслідок важких боїв." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "січень – лютий 1944 р.", event: "Корсунь-Шевченківська наступальна операція", brief: "Одна з найбільших наступальних операцій Червоної армії." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "28 жовтня 1944 р.", event: "завершення вигнання німецьких військ та їх союзників з території України", brief: "Вся територія сучасної України була звільнена від нацистської окупації." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "8 травня 1945 р.", event: "День Перемоги над нацизмом в Другій світовій війні", brief: "Капітуляція нацистської Німеччини, завершення війни в Європі." },
+            { topic_key: "ukraine_ww2", topic_readable: "Україна в роки Другої світової війни", date: "2 вересня 1945 р.", event: "завершення Другої світової війни", brief: "Капітуляція Японії, остаточне завершення Другої світової війни." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "1945 р.", event: "входження Закарпаття до складу УРСР", brief: "Закарпатська Україна була приєднана до Української РСР." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "квітень 1945 р.", event: "Україна стає співзасновницею ООН", brief: "УРСР стала однією з країн-засновниць Організації Об'єднаних Націй." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "березень 1946 р.", event: "ліквідація УГКЦ", brief: "На Львівському 'соборі' було інсценовано самоліквідацію УГКЦ." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "1946-1947 pp.", event: "голод в Україні", brief: "Масовий голод, спричинений повоєнною розрухою та політикою хлібозаготівель." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "квітень липень 1947 р.", event: "проведення польською владою операції «Вісла»", brief: "Примусове переселення українського населення з південно-східних регіонів Польщі." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "жовтень 1947 р.", event: "проведення операції \"Захід\"", brief: "Масова депортація населення Західної України, звинуваченого у зв'язках з УПА." },
+            { topic_key: "ukraine_post_ww2", topic_readable: "Україна в перші повоєнні роки", date: "1951 р.", event: "встановлення західного кордону УРСР", brief: "Остаточне врегулювання кордону між СРСР та Польщею." },
+            { topic_key: "ukraine_destalinization", topic_readable: "Україна в умовах десталінізації", date: "1953-1954 pp.", event: "повстання політичних в'язнів в сталінських концтаборах. Ліквідація ГУТАБУ", brief: "Масові повстання в'язнів ГУЛАГу; ГУЛАГ було реорганізовано." },
+            { topic_key: "ukraine_destalinization", topic_readable: "Україна в умовах десталінізації", date: "лютий 1954 р.", event: "входження Кримської області до складу УРСР", brief: "Кримська область РРФСР була передана до складу Української РСР." },
+            { topic_key: "ukraine_destalinization", topic_readable: "Україна в умовах десталінізації", date: "1956 р.", event: "XX з'їзд КПРС; засудження культу особи", brief: "Микита Хрущов виступив із доповіддю, що засуджувала культ особи Сталіна." },
+            { topic_key: "ukraine_destalinization", topic_readable: "Україна в умовах десталінізації", date: "1959 р.", event: "утворення Української робітничо-селянської спілки", brief: "Підпільна дисидентська організація Левка Лук'яненка." },
+            { topic_key: "ukraine_destalinization", topic_readable: "Україна в умовах десталінізації", date: "1959 р.", event: "утворення Клубу творчої молоді \"Сучасник\" у м. Київ", brief: "Неформальне об'єднання молодої інтелігенції, осередок 'шістдесятництва'." },
+            { topic_key: "ukraine_soviet_crisis", topic_readable: "Україна в період кризи радянської системи", date: "1965 р.", event: "перша хвиля масових затримань діячів антирежимного руху", brief: "Арешти українських дисидентів, що поклали край 'відлизі'." },
+            { topic_key: "ukraine_soviet_crisis", topic_readable: "Україна в період кризи радянської системи", date: "1970 – 1972 pp.", event: "видання самвидавного \"Українського вісника\"", brief: "Підпільний правозахисний журнал В'ячеслава Чорновола." },
+            { topic_key: "ukraine_soviet_crisis", topic_readable: "Україна в період кризи радянської системи", date: "1972 р.", event: "друга хвиля масових затримань діячів антирежимного руху", brief: "Масштабні репресії проти української інтелігенції та дисидентів." },
+            { topic_key: "ukraine_soviet_crisis", topic_readable: "Україна в період кризи радянської системи", date: "1976 р.", event: "утворення Української Гельсінської групи", brief: "Правозахисна організація для контролю за дотриманням Гельсінських угод." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "квітень 1985 р.", event: "початок «перебудови»", brief: "Курс реформ, проголошений М. Горбачовим." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "26 квітня 1986 р.", event: "катастрофа на Чорнобильській АЕС", brief: "Найбільша техногенна катастрофа в історії людства." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "вересень 1989 р.", event: "створення Народного руху України за перебудову", brief: "Масова громадсько-політична організація, ключова у здобутті незалежності." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "березень 1990 р.", event: "перші альтернативні вибори до Верховної Ради УРСР", brief: "Вибори, на яких вперше було допущено участь кандидатів від різних політичних сил." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "16 липня 1990 р.", event: "прийняття Верховною Радою УРСР Декларації про державний суверенітет України", brief: "Документ, що проголошував верховенство влади республіки в межах її території." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "жовтень 1990 р.", event: "\"Революція на граніті\"", brief: "Студентське голодування на Майдані Незалежності в Києві." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "24 серпня 1991 р.", event: "прийняття Верховною Радою УРСР Акта проголошення незалежності України", brief: "Історичний документ, що проголосив створення самостійної української держави – України." },
+            { topic_key: "ukraine_independence_restoration", topic_readable: "Відновлення незалежності України", date: "1 грудня 1991 р.", event: "проведення Всеукраїнського референдуму та обрання Президента України", brief: "Більшість підтримала незалежність; Леонід Кравчук обраний першим Президентом." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "6 грудня 1991 р.", event: "заснування Збройних сил України", brief: "Створення власних збройних сил незалежної України." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "липень 1994 р.", event: "обрання Л. Кучми Президентом України", brief: "Леонід Кучма переміг на дострокових президентських виборах." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "1995 р.", event: "обрання України членом Ради Європи (РЄ)", brief: "Україна стала повноправним членом Ради Європи." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "28 червня 1996 р.", event: "ухвалення Конституції України", brief: "Прийняття Основного Закону незалежної України." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "вересень 1996 р.", event: "запровадження національної грошової одиниці – гривні", brief: "В обіг була введена нова українська валюта." },
+            { topic_key: "ukraine_independent_state_formation", topic_readable: "Становлення України як незалежної держави", date: "жовтень – грудень 2004 р.", event: "\"Помаранчева революція\", обрання Президентом України В. Ющенка", brief: "Масові протести проти фальсифікації президентських виборів, перемога Віктора Ющенка." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "2008 р.", event: "вступ України до Світової організації торгівлі (СОТ)", brief: "Україна стала членом СОТ." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "січень 2010 р.", event: "обрання В. Януковича Президентом України", brief: "Віктор Янукович переміг на президентських виборах." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "листопад 2013 – лютий 2014 рр.", event: "\"Революція гідності\"; повалення режиму В. Януковича", brief: "Масові протести, що призвели до повалення авторитарного режиму." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "червень 2014 р.", event: "обрання П. Порошенка Президентом України", brief: "Петро Порошенко був обраний Президентом України на позачергових виборах." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "2014 р.", event: "підписання Україною Угоди про асоціацію з Європейським Союзом (ЄС)", brief: "Важливий крок на шляху європейської інтеграції України." },
+            { topic_key: "ukraine_new_era", topic_readable: "Творення нової України", date: "вересень 2014 р., лютий 2015 р.", event: "Мінські домовленості", brief: "Комплекс заходів, спрямованих на врегулювання збройного конфлікту на сході України." }
+        ];
+        
+        // --- 1. DOM Elements ---
+        const screens = {
+            nickname: document.getElementById('nicknameScreen'),
+            lobby: document.getElementById('lobbyScreen'),
+            createRoom: document.getElementById('createRoomScreen'),
+            joinRoom: document.getElementById('joinRoomScreen'),
+            soloSettings: document.getElementById('soloGameSettingsScreen'),
+            waiting: document.getElementById('waitingScreen'),
+            match: document.getElementById('matchScreen'),
+            resultModal: document.getElementById('resultModal')
+        };
+
+        // Profile Header
+        const profileBtn = document.getElementById('profileBtn');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileDisplayNicknameEl = document.getElementById('profileDisplayNickname');
+        const profileTotalScoreEl = document.getElementById('profileTotalScore');
+        const profileRoundsPlayedEl = document.getElementById('profileRoundsPlayed');
+        const profileAvgAccuracyEl = document.getElementById('profileAvgAccuracy');
+        const profileMatchHistoryEl = document.getElementById('profileMatchHistory');
+        const logoutBtn = document.getElementById('logoutBtn');
+        
+        // Nickname Screen
+        const mainNicknameInput = document.getElementById('mainNicknameInput');
+        const continueToLobbyBtn = document.getElementById('continueToLobbyBtn');
+        const wsAddressInputGlobal = document.getElementById('wsAddressInputGlobal');
+
+        // Lobby Screen
+        const showCreateRoomScreenBtn = document.getElementById('showCreateRoomScreenBtn');
+        const showJoinRoomScreenBtn = document.getElementById('showJoinRoomScreenBtn');
+        const startSoloGameBtn = document.getElementById('startSoloGameBtn');
+
+        // Create Room Screen
+        const createRoomNameInput = document.getElementById('createRoomName');
+        const createRoomPasswordInput = document.getElementById('createRoomPassword');
+        const createRoomTopicSelect = document.getElementById('createRoomTopic');
+        const createGameModeSelect = document.getElementById('createGameMode');
+        const createLivesCountSelect = document.getElementById('createLivesCount');
+        const submitCreateRoomBtn = document.getElementById('submitCreateRoomBtn');
+
+        // Join Room Screen
+        const roomListContainer = document.getElementById('roomListContainer');
+        const joinSelectedRoomForm = document.getElementById('joinSelectedRoomForm');
+        const selectedRoomNameDisplay = document.getElementById('selectedRoomNameDisplay');
+        const joinRoomPasswordInput = document.getElementById('joinRoomPassword');
+        const submitJoinRoomBtn = document.getElementById('submitJoinRoomBtn');
+        let selectedRoomToJoinId = null;
+
+
+        // Solo Game Settings Screen
+        const soloGameTopicSelect = document.getElementById('soloGameTopic');
+        const soloGameModeSelect = document.getElementById('soloGameMode');
+        const soloLivesCountSelect = document.getElementById('soloLivesCount');
+        const soloQuestionCountInput = document.getElementById('soloQuestionCount');
+        const submitStartSoloGameBtn = document.getElementById('submitStartSoloGameBtn');
+
+        // Waiting Screen
+        const waitingRoomIdDisplay = document.getElementById('waitingRoomIdDisplay');
+        const waitingPlayersListEl = document.getElementById('waitingPlayersList');
+        const waitingStatusTextEl = document.getElementById('waitingStatusText');
+        const waitingCountdownEl = document.getElementById('waitingCountdown');
+        const cancelWaitingBtn = document.getElementById('cancelWaitingBtn');
+
+        // Match Screen
+        const localPlayerNameEl = document.getElementById('localPlayerName');
+        const localPlayerScoreEl = document.getElementById('localPlayerScore');
+        const localPlayerLivesContainer = document.getElementById('localPlayerLives');
+        const opponentPlayerNameEl = document.getElementById('opponentPlayerName');
+        const opponentPlayerScoreEl = document.getElementById('opponentPlayerScore');
+        const opponentPlayerLivesContainer = document.getElementById('opponentPlayerLives');
+        const questionNumberDisplayEl = document.getElementById('questionNumberDisplay');
+        const questionTextEl = document.getElementById('questionTextEl');
+        const optionsContainerEl = document.getElementById('optionsContainerEl');
+        const briefInfoEl = document.getElementById('briefInfoEl');
+        const questionTimerFillEl = document.getElementById('questionTimerFill');
+        const questionTimeLeftDisplayEl = document.getElementById('questionTimeLeftDisplay');
+        const matchTimerDisplayEl = document.getElementById('matchTimerDisplay');
+        const leaveMatchBtn = document.getElementById('leaveMatchBtn');
+
+        // Result Modal
+        const resultModalTitleEl = document.getElementById('resultModalTitle');
+        const resultTableBodyEl = document.getElementById('resultTableBody');
+        const mistakesContainerEl = document.getElementById('mistakesContainer');
+        const mistakesListEl = document.getElementById('mistakesList');
+        const rematchBtn = document.getElementById('rematchBtn');
+        const newTopicBtnModal = document.getElementById('newTopicBtnModal');
+        const exitToLobbyFromModalBtn = document.getElementById('exitToLobbyFromModalBtn');
+
+        const statusMessageEl = document.getElementById('statusMessage');
+        document.querySelectorAll('.back-to-lobby').forEach(btn => {
+            btn.addEventListener('click', () => switchScreen('lobby'));
+        });
+
+
+        // --- 2. Game State & WebSocket Variables ---
+        let ws = null;
+        let localPlayer = {
+            id: null, // Assigned by server or generated for solo
+            nickname: "Гість",
+            score: 0,
+            lives: 3,
+            isHost: false,
+            answeredThisQuestion: false,
+            stats: {
+                totalScore: 0,
+                roundsPlayed: 0,
+                correctAnswersSum: 0,
+                totalQuestionsAnsweredSum: 0,
+                matchHistory: [] // { date, mode, score, accuracy, opponent (if any) }
+            }
+        };
+        let opponentPlayer = null; // { id, nickname, score, lives } for multiplayer
+        
+        let currentRoom = {
+            id: null,
+            name: "",
+            passwordProtected: false,
+            topic: "all_ukraine_history",
+            mode: "basic", // 'basic' or 'reverse'
+            lives: 3,
+            players: [] // List of player objects in the room
+        };
+
+        let currentMatch = {
+            questions: [], // { id, questionText, options, correctIndex, briefInfo }
+            currentQuestionIndex: -1,
+            totalQuestionsInMatch: 0,
+            isSolo: false
+        };
+        
+        const QUESTION_TIME_LIMIT = 15;
+        let questionTimerInterval = null;
+        let questionTimeLeft = QUESTION_TIME_LIMIT;
+        let matchTimerInterval = null;
+        let matchTimeElapsed = 0;
+        let countdownInterval = null;
+        let waitingTimeout = null;
+
+
+        // --- 3. Utility Functions ---
+        function showStatus(message, type = 'info', duration = 5000) {
+            statusMessageEl.textContent = message;
+            statusMessageEl.className = ''; 
+            statusMessageEl.classList.add(type);
+            statusMessageEl.style.display = 'block';
+            setTimeout(() => { statusMessageEl.style.display = 'none'; }, duration);
+        }
+
+        function switchScreen(screenId) {
+            Object.values(screens).forEach(s => s.classList.remove('active'));
+            if (screens[screenId]) {
+                screens[screenId].classList.add('active');
+            } else {
+                console.error("Screen not found:", screenId);
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+        
+        function formatTime(totalSeconds) {
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        // --- 4. Profile & Stats Functions ---
+        function loadProfile() {
+            const savedProfile = localStorage.getItem('blitzDatesUserProfile');
+            if (savedProfile) {
+                const parsedProfile = JSON.parse(savedProfile);
+                localPlayer.nickname = parsedProfile.nickname || "Гість";
+                localPlayer.stats = parsedProfile.stats || { totalScore: 0, roundsPlayed: 0, correctAnswersSum: 0, totalQuestionsAnsweredSum: 0, matchHistory: [] };
+            }
+            mainNicknameInput.value = localPlayer.nickname === "Гість" ? "" : localPlayer.nickname;
+            updateProfileUI();
+        }
+
+        function saveProfile() {
+            const profileToSave = {
+                nickname: localPlayer.nickname,
+                stats: localPlayer.stats
+            };
+            localStorage.setItem('blitzDatesUserProfile', JSON.stringify(profileToSave));
+            updateProfileUI();
+        }
+
+        function updateProfileUI() {
+            profileDisplayNicknameEl.textContent = localPlayer.nickname;
+            profileTotalScoreEl.textContent = localPlayer.stats.totalScore;
+            profileRoundsPlayedEl.textContent = localPlayer.stats.roundsPlayed;
+            const avgAcc = localPlayer.stats.totalQuestionsAnsweredSum > 0 ?
+                ((localPlayer.stats.correctAnswersSum / localPlayer.stats.totalQuestionsAnsweredSum) * 100).toFixed(0) : 0;
+            profileAvgAccuracyEl.textContent = avgAcc;
+
+            profileMatchHistoryEl.innerHTML = '';
+            if (localPlayer.stats.matchHistory.length === 0) {
+                profileMatchHistoryEl.innerHTML = '<li>Історія порожня</li>';
+            } else {
+                localPlayer.stats.matchHistory.slice(-5).reverse().forEach(match => { // Last 5 matches
+                    const li = document.createElement('li');
+                    const matchDate = new Date(match.date).toLocaleDateString('uk-UA');
+                    li.textContent = `${matchDate} - ${match.mode === 'solo' ? 'Соло' : 'МП ('+match.opponent+')'}: ${match.score} оч., ${match.accuracy}%`;
+                    profileMatchHistoryEl.appendChild(li);
+                });
+            }
+        }
+        
+        function addMatchToHistory(isSolo, score, correctCount, totalQuestionsInMatch, opponentNickname = null) {
+            localPlayer.stats.roundsPlayed++;
+            localPlayer.stats.totalScore += score;
+            localPlayer.stats.correctAnswersSum += correctCount;
+            localPlayer.stats.totalQuestionsAnsweredSum += totalQuestionsInMatch;
+
+            const accuracy = totalQuestionsInMatch > 0 ? ((correctCount / totalQuestionsInMatch) * 100).toFixed(0) : 0;
+            localPlayer.stats.matchHistory.push({
+                date: new Date().toISOString(),
+                mode: isSolo ? 'solo' : 'multiplayer',
+                opponent: isSolo ? null : opponentNickname,
+                score: score,
+                accuracy: parseInt(accuracy),
+                correct: correctCount,
+                totalQ: totalQuestionsInMatch
+            });
+            if(localPlayer.stats.matchHistory.length > 20) { // Keep only last 20 matches
+                localPlayer.stats.matchHistory.shift();
+            }
+            saveProfile();
+        }
+
+
+        // --- 5. WebSocket Functions ---
+        function connectWebSocket() {
+            const wsAddress = wsAddressInputGlobal.value.trim();
+            if (!wsAddress) {
+                showStatus("Будь ласка, введіть адресу WebSocket сервера.", "error"); return false;
+            }
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                console.log("WebSocket: Already connected or connecting."); return true;
+            }
+            if (ws) { ws.close(); } // Close any old stale connection
+
+            showStatus(`Підключення до ${wsAddress}...`, "info");
+            try {
+                ws = new WebSocket(wsAddress);
+            } catch (e) {
+                 showStatus(`Помилка створення WebSocket: ${e.message}. Перевірте формат адреси.`, "error");
+                 return false;
+            }
+
+
+            ws.onopen = () => {
+                showStatus("Підключено до WebSocket сервера!", "success");
+                localStorage.setItem('blitzDatesWSAddress', wsAddress);
+            };
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    console.log("SERVER -> CLIENT:", message);
+                    handleServerMessage(message);
+                } catch (e) {
+                    console.error("Failed to parse server message:", event.data, e);
+                    showStatus("Отримано некоректне повідомлення від сервера.", "error");
+                }
+            };
+            ws.onerror = (error) => {
+                console.error("WebSocket Error:", error);
+                showStatus(`Помилка WebSocket: не вдалося підключитися до ${wsAddress}.`, "error");
+                ws = null;
+            };
+            ws.onclose = (event) => {
+                if (event.code !== 1000) { // 1000 is normal closure
+                    showStatus(`WebSocket з'єднання закрито (код: ${event.code}).`, event.wasClean ? "info" : "error");
+                } else {
+                    showStatus(`WebSocket з'єднання закрито.`, "info");
+                }
+                ws = null;
+                if (screens.match.classList.contains('active') || screens.waiting.classList.contains('active')) {
+                    resetGameToLobby("З'єднання з сервером втрачено.");
+                }
+            };
+            return true;
+        }
+
+        function sendToServer(data) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                console.log("CLIENT -> SERVER:", data);
+                ws.send(JSON.stringify(data));
+            } else {
+                showStatus("Немає з'єднання з сервером. Спробуйте підключитись.", "error");
+                // Attempt to reconnect or guide user
+                if(!ws || ws.readyState === WebSocket.CLOSED){
+                    connectWebSocket(); // Try to reconnect if fully closed
+                }
+            }
+        }
+
+        function handleServerMessage(msg) {
+            switch (msg.type) {
+                case 'room_created':
+                    currentRoom.id = msg.roomId;
+                    localPlayer.id = msg.playerId;
+                    localPlayer.isHost = true;
+                    waitingRoomIdDisplay.textContent = currentRoom.id;
+                    waitingPlayersListEl.innerHTML = `<li>${localPlayer.nickname} (Ви, хост)</li>`;
+                    waitingStatusTextEl.textContent = "Кімната створена. Надішліть ID другу та очікуйте його підключення...";
+                    switchScreen('waiting');
+                    // Start timeout for waiting for opponent
+                    clearTimeout(waitingTimeout);
+                    waitingTimeout = setTimeout(() => {
+                        if (currentRoom.players.length < 2 && screens.waiting.classList.contains('active')) {
+                            showStatus("Час очікування суперника вийшов. Кімнату закрито.", "info");
+                            sendToServer({ type: 'close_room', roomId: currentRoom.id, playerId: localPlayer.id }); // Inform server
+                            resetGameToLobby();
+                        }
+                    }, 30000); // 30 seconds
+                    break;
+
+                case 'join_success': // For guest
+                    currentRoom.id = msg.roomId;
+                    localPlayer.id = msg.playerId;
+                    localPlayer.isHost = false;
+                    // msg.roomDetails should contain players already in room, topic etc.
+                    currentRoom.name = msg.roomDetails.name;
+                    currentRoom.players = msg.roomDetails.playersInfo;
+                    updateWaitingPlayerList();
+                    waitingStatusTextEl.textContent = `Успішно приєднано до кімнати "${currentRoom.name}". Очікуємо початку гри...`;
+                    switchScreen('waiting');
+                    break;
+                
+                case 'player_joined': // Received by all in room when new player joins (including the one who just joined)
+                    currentRoom.players = msg.playersInfo;
+                    updateWaitingPlayerList();
+                    if(localPlayer.isHost && currentRoom.players.length === 2){
+                         waitingStatusTextEl.textContent = `Гравець ${msg.nickname} приєднався! Починаємо гру...`;
+                         // Server might auto-start, or host has a button to start. Assume auto-start for now.
+                    } else if (!localPlayer.isHost) {
+                         waitingStatusTextEl.textContent = `Ви приєднались. Гравець ${msg.nickname} також у кімнаті.`;
+                    }
+                    if (currentRoom.players.length === 2) { // Assuming 2 players to start
+                        startCountdown();
+                    }
+                    break;
+
+                case 'room_update': // Generic room update (e.g. settings changed by host)
+                    currentRoom.name = msg.roomDetails.name;
+                    currentRoom.topic = msg.roomDetails.topic;
+                    // Update UI if needed
+                    break;
+                
+                case 'countdown_started': // Server might send this to sync countdown
+                    startCountdown(msg.duration || 3);
+                    break;
+
+                case 'match_started':
+                    currentMatch.questions = msg.questions;
+                    currentMatch.totalQuestionsInMatch = msg.totalQuestions;
+                    currentMatch.isSolo = false;
+                    
+                    // Map server player IDs to local and opponent
+                    const serverLocalPlayer = msg.playersInfo.find(p => p.playerId === localPlayer.id);
+                    const serverOpponentPlayer = msg.playersInfo.find(p => p.playerId !== localPlayer.id);
+
+                    if(serverLocalPlayer) {
+                        localPlayer.score = serverLocalPlayer.score;
+                        localPlayer.lives = serverLocalPlayer.lives;
+                    }
+                    if(serverOpponentPlayer) {
+                        opponentPlayer = { ...serverOpponentPlayer };
+                    } else { // Should not happen in 2-player game start, but as a fallback
+                        opponentPlayer = { id: "opponent_dummy", nickname: "Суперник", score: 0, lives: currentRoom.lives || 3 };
+                    }
+                    
+                    currentMatch.currentQuestionIndex = -1; // Will be inc. to 0 for first question
+                    
+                    switchScreen('match');
+                    updateMatchPlayerUI();
+                    startMatchTimer();
+                    loadNextQuestionFlow(); // Request first question from server or use if sent
+                    break;
+                
+                case 'new_question':
+                    currentMatch.currentQuestionIndex = msg.questionIndex;
+                    const qData = msg.questionData;
+                    renderQuestion(qData);
+                    briefInfoEl.style.display = 'none'; // Hide previous brief info
+                    briefInfoEl.textContent = '';
+                    break;
+
+                case 'answer_result':
+                    const localResult = msg.playersData.find(p => p.playerId === localPlayer.id);
+                    const opponentResultData = msg.playersData.find(p => p.playerId !== localPlayer.id);
+
+                    if (localResult) {
+                        localPlayer.score = localResult.score;
+                        localPlayer.lives = localResult.lives;
+                    }
+                    if (opponentPlayer && opponentResultData) { // Update opponent if they exist
+                        opponentPlayer.score = opponentResultData.score;
+                        opponentPlayer.lives = opponentResultData.lives;
+                    }
+                    updateMatchPlayerUI();
+                    markOptionsAfterResult(msg.correctOptionIndex, msg.questionBriefInfo);
+
+                    // Client waits 2s then checks if it should load next or end
+                    setTimeout(() => {
+                         loadNextOrFinishAfterServerResult();
+                    }, 2000);
+                    break;
+
+                case 'round_end':
+                    showResultModal(msg.results, msg.mistakes || []);
+                    addMatchToHistory(false, localPlayer.score, msg.results.find(r=>r.playerId === localPlayer.id)?.correctCount || 0, currentMatch.totalQuestionsInMatch, opponentPlayer?.nickname);
+                    break;
+                
+                case 'player_left':
+                    showStatus(`Гравець '${msg.nickname}' покинув кімнату.`, "info");
+                    if (screens.match.classList.contains('active')) {
+                        showResultModal([{ // Create a dummy result indicating opponent left
+                            playerId: localPlayer.id, nickname: localPlayer.nickname, score: localPlayer.score, 
+                            correctCount: currentMatch.questions.filter((q,i) => i < currentMatch.currentQuestionIndex && q.playerAnswerCorrect).length, // Approximate
+                            wrongCount: currentMatch.questions.filter((q,i) => i < currentMatch.currentQuestionIndex && !q.playerAnswerCorrect && q.playerAnswered).length
+                        }], []);
+                        // Optionally add "Opponent Left" to modal title
+                        resultModalTitleEl.textContent = "Результати Раунду (Суперник вийшов)";
+                    } else if (screens.waiting.classList.contains('active')) {
+                        currentRoom.players = currentRoom.players.filter(p => p.id !== msg.playerId);
+                        updateWaitingPlayerList();
+                        waitingStatusTextEl.textContent = "Суперник вийшов. Очікуємо нового гравця...";
+                        clearTimeout(waitingTimeout); // Restart waiting timeout if needed or let host cancel
+                         waitingTimeout = setTimeout(() => { /* ... */ }, 30000);
+                    }
+                    break;
+
+                case 'room_list': // For join room screen
+                    renderRoomList(msg.rooms);
+                    break;
+
+                case 'error':
+                    showStatus(`Помилка від сервера: ${msg.message}`, "error");
+                    if(msg.context === 'join_room') { // Re-enable join form if join failed
+                        selectedRoomToJoinId = null;
+                        joinSelectedRoomForm.style.display = 'none';
+                    }
+                    break;
+            }
+        }
+        
+        function updateWaitingPlayerList(){
+            waitingPlayersListEl.innerHTML = '';
+            currentRoom.players.forEach(p => {
+                const li = document.createElement('li');
+                li.textContent = p.nickname + (p.id === localPlayer.id ? " (Ви)" : "") + (p.isHost ? " (Хост)" : "");
+                waitingPlayersListEl.appendChild(li);
+            });
+        }
+
+        function startCountdown(duration = 3) {
+            clearTimeout(waitingTimeout); // Stop waiting for opponent timeout
+            waitingCountdownEl.style.display = 'block';
+            let count = duration;
+            waitingCountdownEl.textContent = count;
+            countdownInterval = setInterval(() => {
+                count--;
+                waitingCountdownEl.textContent = count;
+                if (count <= 0) {
+                    clearInterval(countdownInterval);
+                    waitingCountdownEl.style.display = 'none';
+                    // Server should send 'match_started'
+                    // For client-side fallback if server doesn't initiate:
+                    // if(localPlayer.isHost) sendToServer({type: 'request_start_match', roomId: currentRoom.id});
+                }
+            }, 1000);
+        }
+        
+        function renderRoomList(rooms) {
+            roomListContainer.innerHTML = '';
+            if (!rooms || rooms.length === 0) {
+                roomListContainer.innerHTML = '<p>Активних кімнат немає.</p>';
+                return;
+            }
+            rooms.forEach(room => {
+                const item = document.createElement('div');
+                item.classList.add('room-list-item');
+                item.dataset.roomId = room.id;
+                item.dataset.roomName = room.name;
+                item.dataset.requiresPassword = room.passwordProtected;
+                
+                let statusText = `${room.name} (${room.playerCount}/${room.maxPlayers || 2})`;
+                statusText += ` | Тема: ${room.topicReadable || room.topic}`;
+                if (room.passwordProtected) statusText += ' (Захищено)';
+                
+                item.textContent = statusText;
+                item.onclick = () => {
+                    document.querySelectorAll('.room-list-item').forEach(el => el.classList.remove('selected-room'));
+                    item.classList.add('selected-room');
+                    selectedRoomToJoinId = room.id;
+                    selectedRoomNameDisplay.textContent = `Кімната: ${room.name}`;
+                    joinRoomPasswordInput.value = '';
+                    joinRoomPasswordInput.disabled = !room.passwordProtected;
+                    joinSelectedRoomForm.style.display = 'block';
+                };
+                roomListContainer.appendChild(item);
+            });
+        }
+
+
+        // --- 6. Game Flow & UI (Match) ---
+        function updateMatchPlayerUI() {
+            localPlayerNameEl.textContent = localPlayer.nickname + " (Ви)";
+            localPlayerScoreEl.textContent = localPlayer.score;
+            renderLives(localPlayerLivesContainer, localPlayer.lives);
+
+            if (opponentPlayer) {
+                opponentPlayerNameEl.textContent = opponentPlayer.nickname;
+                opponentPlayerScoreEl.textContent = opponentPlayer.score;
+                renderLives(opponentPlayerLivesContainer, opponentPlayer.lives);
+                document.getElementById('playerInfoOpponent').style.display = 'block';
+            } else if (currentMatch.isSolo) {
+                 document.getElementById('playerInfoOpponent').style.display = 'none';
+            } else { // Waiting for opponent data
+                 opponentPlayerNameEl.textContent = "Суперник...";
+                 opponentPlayerScoreEl.textContent = "0";
+                 renderLives(opponentPlayerLivesContainer, currentRoom.lives || 3);
+                 document.getElementById('playerInfoOpponent').style.display = 'block';
+            }
+        }
+
+        function renderLives(container, livesCount) {
+            container.innerHTML = '';
+            const maxLives = currentMatch.isSolo ? parseInt(soloLivesCountSelect.value) : (currentRoom.lives || 3);
+            for (let i = 0; i < maxLives; i++) {
+                const heart = document.createElement('span');
+                heart.classList.add('life-heart');
+                heart.textContent = '❤️';
+                if (i >= livesCount) heart.classList.add('lost');
+                container.appendChild(heart);
+            }
+        }
+
+        function renderQuestion(questionData) { // questionData from server or solo mode
+            localPlayer.answeredThisQuestion = false;
+            questionTextEl.textContent = questionData.questionText;
+            questionNumberDisplayEl.textContent = `Питання ${currentMatch.currentQuestionIndex + 1} з ${currentMatch.totalQuestionsInMatch}`;
+            
+            optionsContainerEl.innerHTML = '';
+            // Shuffle options if server hasn't already (server should ideally send shuffled options)
+            const optionsToDisplay = questionData.options; // shuffleArray([...questionData.options]); 
+                                                       // Server usually sends options in order, client must not shuffle if correctIndex refers to original server order.
+                                                       // If server shuffles and provides correctIndex for shuffled list, then client uses as is.
+                                                       // For this demo, assume server provides options and correctIndex refers to *that* list.
+
+            optionsToDisplay.forEach((optionText, index) => {
+                const button = document.createElement('button');
+                button.classList.add('option-button');
+                button.textContent = optionText;
+                button.dataset.index = index; // Index in the options array server sent
+                button.disabled = false;
+                button.onclick = handleOptionClick;
+                optionsContainerEl.appendChild(button);
+            });
+            briefInfoEl.style.display = 'none'; // Hide previous brief info
+            briefInfoEl.textContent = '';
+            startQuestionTimer();
+        }
+        
+        function handleOptionClick(event) {
+            if (localPlayer.answeredThisQuestion) return;
+            localPlayer.answeredThisQuestion = true;
+
+            clearInterval(questionTimerInterval);
+            const chosenIdx = parseInt(event.target.dataset.index);
+            const timeTaken = QUESTION_TIME_LIMIT - questionTimeLeft;
+
+            event.target.classList.add('selected');
+            optionsContainerEl.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
+
+            if (currentMatch.isSolo) {
+                processSoloAnswer(chosenIdx, timeTaken);
+            } else {
+                sendToServer({
+                    type: "answer",
+                    playerId: localPlayer.id,
+                    roomId: currentRoom.id,
+                    questionId: currentMatch.questions[currentMatch.currentQuestionIndex].id,
+                    chosenOptionIndex: chosenIdx,
+                    answerTimeSec: timeTaken
+                });
+            }
+        }
+
+        function startQuestionTimer() {
+            questionTimeLeft = QUESTION_TIME_LIMIT;
+            questionTimeLeftDisplayEl.textContent = questionTimeLeft;
+            questionTimerFillEl.style.width = '100%';
+             // CSS transition will handle the bar animation
+            requestAnimationFrame(() => { // Force reflow for transition
+                questionTimerFillEl.style.transition = `width ${QUESTION_TIME_LIMIT}s linear`;
+                questionTimerFillEl.style.width = '0%';
+            });
+            
+            clearInterval(questionTimerInterval);
+            questionTimerInterval = setInterval(() => {
+                questionTimeLeft--;
+                questionTimeLeftDisplayEl.textContent = questionTimeLeft;
+
+                if (questionTimeLeft <= 0) {
+                    clearInterval(questionTimerInterval);
+                    if (!localPlayer.answeredThisQuestion) {
+                        localPlayer.answeredThisQuestion = true;
+                        optionsContainerEl.querySelectorAll('.option-button').forEach(btn => btn.disabled = true);
+                        if (currentMatch.isSolo) {
+                            processSoloAnswer(null, QUESTION_TIME_LIMIT); // null for timeout
+                        } else {
+                            sendToServer({
+                                type: "answer", playerId: localPlayer.id, roomId: currentRoom.id,
+                                questionId: currentMatch.questions[currentMatch.currentQuestionIndex].id,
+                                chosenOptionIndex: null, answerTimeSec: QUESTION_TIME_LIMIT
+                            });
+                        }
+                    }
+                }
+            }, 1000);
+        }
+        
+        function markOptionsAfterResult(correctOptionIndex, briefInfoText) { // For multiplayer
+            optionsContainerEl.querySelectorAll('.option-button').forEach((btn, idx) => {
+                btn.disabled = true; // Ensure all are disabled
+                btn.classList.remove('selected'); // Clear player's preliminary selection style
+
+                if (idx === correctOptionIndex) {
+                    btn.classList.add('correct');
+                } else {
+                    // If this button was the one the local player chose and it was wrong
+                    // We need to know what localPlayer chose. For now, assume server handles this.
+                    // Or, store localPlayer's choice temporarily. Let's assume player clicked on one.
+                    // This part is tricky without knowing which button *this client* selected.
+                    // The 'selected' class was client-side only. Server result is king.
+                    btn.classList.add('wrong'); 
+                    // btn.classList.add('disabled-after-reveal'); // Better to just mark all wrong
+                }
+            });
+            if (briefInfoText) {
+                briefInfoEl.textContent = briefInfoText;
+                briefInfoEl.style.display = 'block';
+            }
+        }
+        
+        function loadNextOrFinishAfterServerResult() { // Called after server sends answer_result
+            // The server will send a 'new_question' message if there are more questions
+            // OR a 'round_end' message if the game/round is over.
+            // So, client usually doesn't decide this on its own in multiplayer.
+            // If this is solo, client can decide.
+            if(currentMatch.isSolo){
+                // Handled by processSoloAnswer
+            } else {
+                 // In multiplayer, client waits for server's next instruction ('new_question' or 'round_end')
+                console.log("Waiting for server's next_question or round_end.");
+            }
+        }
+
+
+        function loadNextQuestionFlow() { // To initiate getting the first/next question
+            if (currentMatch.isSolo) {
+                currentMatch.currentQuestionIndex++;
+                if (currentMatch.currentQuestionIndex < currentMatch.totalQuestionsInMatch && localPlayer.lives > 0) {
+                    renderQuestion(currentMatch.questions[currentMatch.currentQuestionIndex]);
+                } else {
+                    showResultModalForSolo();
+                }
+            } else { // Multiplayer: server will send 'new_question'
+                // If this is the very first question after match_started, server might send it immediately
+                // or client might need to request it if protocol demands.
+                // Assuming server pushes first 'new_question'.
+                // If not, you'd send a "ready_for_next_question" or similar here.
+            }
+        }
+        
+        function startMatchTimer() {
+            matchTimeElapsed = 0;
+            matchTimerDisplayEl.textContent = formatTime(matchTimeElapsed);
+            clearInterval(matchTimerInterval);
+            matchTimerInterval = setInterval(() => {
+                matchTimeElapsed++;
+                matchTimerDisplayEl.textContent = formatTime(matchTimeElapsed);
+            }, 1000);
+        }
+
+        // --- 7. Solo Mode Logic ---
+        function startSoloGame() {
+            currentMatch.isSolo = true;
+            opponentPlayer = null; // No opponent in solo
+            document.getElementById('playerInfoOpponent').style.display = 'none'; // Hide opponent panel
+
+            const topic = soloGameTopicSelect.value;
+            const mode = soloGameModeSelect.value; // 'basic' or 'reverse'
+            localPlayer.lives = parseInt(soloLivesCountSelect.value);
+            currentMatch.totalQuestionsInMatch = parseInt(soloQuestionCountInput.value);
+
+            // Get questions (locally for now)
+            let sourceQuestions = ALL_HISTORICAL_EVENTS;
+            if (topic !== 'all_ukraine_history') {
+                sourceQuestions = ALL_HISTORICAL_EVENTS.filter(e => e.topic_key === topic);
+            }
+            if (sourceQuestions.length === 0) {
+                 showStatus("Для обраної теми немає даних. Будь ласка, виберіть іншу.", "error");
+                 return;
+            }
+            
+            currentMatch.questions = shuffleArray([...sourceQuestions])
+                .slice(0, currentMatch.totalQuestionsInMatch)
+                .map((eventData, index) => {
+                    // Transform into question structure
+                    const qId = `solo_q_${index}`;
+                    let questionText, options, correctIndex;
+
+                    if (mode === 'basic') { // Event -> Date
+                        questionText = `В якому році відбулася подія: "${eventData.event}"?`;
+                        options = [eventData.date];
+                        correctIndex = 0; // The first option is correct
+                        // Add 3 wrong date options
+                        const allOtherDates = shuffleArray(ALL_HISTORICAL_EVENTS.filter(e => e.date !== eventData.date).map(e => e.date));
+                        for(let i=0; i<3 && i < allOtherDates.length; i++){
+                            options.push(allOtherDates[i]);
+                        }
+                        // Ensure 4 options, even if not enough unique wrong dates (can duplicate wrong ones but not the right one)
+                        while(options.length < 4) options.push(options.length > 1 ? options[1] : "Інша дата"); 
+                        options = shuffleArray(options);
+                        correctIndex = options.findIndex(opt => opt === eventData.date);
+
+                    } else { // Date -> Event (Reverse)
+                        questionText = `Яка подія відбулася ${eventData.date}?`;
+                        options = [eventData.event];
+                        correctIndex = 0;
+                        // Add 3 wrong event options
+                        const allOtherEvents = shuffleArray(ALL_HISTORICAL_EVENTS.filter(e => e.event !== eventData.event).map(e => e.event));
+                         for(let i=0; i<3 && i < allOtherEvents.length; i++){
+                            options.push(allOtherEvents[i]);
+                        }
+                        while(options.length < 4) options.push(options.length > 1 ? options[1] : "Інша подія");
+                        options = shuffleArray(options);
+                        correctIndex = options.findIndex(opt => opt === eventData.event);
+                    }
+                    return { id: qId, questionText, options, correctIndex, briefInfo: eventData.brief, playerAnswered: false, playerAnswerCorrect: false };
+                });
+            
+            if (currentMatch.questions.length < currentMatch.totalQuestionsInMatch) {
+                showStatus(`Недостатньо унікальних питань для теми. Згенеровано ${currentMatch.questions.length}.`, "info");
+                currentMatch.totalQuestionsInMatch = currentMatch.questions.length;
+            }
+            if(currentMatch.totalQuestionsInMatch === 0){
+                showStatus("Не вдалося згенерувати питання для соло-гри.", "error"); return;
+            }
+
+            localPlayer.score = 0;
+            // localPlayer.lives already set
+            currentMatch.currentQuestionIndex = -1;
+            
+            switchScreen('match');
+            updateMatchPlayerUI();
+            startMatchTimer();
+            loadNextQuestionFlow();
+        }
+
+        function processSoloAnswer(chosenIdx, timeTaken) {
+            const currentQ = currentMatch.questions[currentMatch.currentQuestionIndex];
+            currentQ.playerAnswered = true;
+            let isCorrect = false;
+
+            if (chosenIdx !== null && chosenIdx === currentQ.correctIndex) {
+                isCorrect = true;
+                currentQ.playerAnswerCorrect = true;
+                localPlayer.score += 10; // Base points
+                if (timeTaken < QUESTION_TIME_LIMIT) {
+                    localPlayer.score += (QUESTION_TIME_LIMIT - timeTaken); // Speed bonus
+                }
+            } else {
+                localPlayer.lives--;
+                currentQ.playerAnswerCorrect = false;
+            }
+            
+            updateMatchPlayerUI(); // Update score and lives display
+            markOptionsAfterResult(currentQ.correctIndex, currentQ.briefInfo); // Use the solo version of marking
+
+            setTimeout(() => {
+                loadNextQuestionFlow(); // Check if more questions or end solo game
+            }, 2000);
+        }
+        
+        function showResultModalForSolo() {
+            clearInterval(questionTimerInterval);
+            clearInterval(matchTimerInterval);
+            resultModalTitleEl.textContent = "Результати Соло-гри";
+            screens.match.classList.remove('active');
+            screens.resultModal.style.display = 'flex';
+
+            const correctAnswers = currentMatch.questions.filter(q => q.playerAnswerCorrect).length;
+            const wrongAnswers = currentMatch.totalQuestionsInMatch - correctAnswers;
+
+            resultTableBodyEl.innerHTML = `
+                <tr>
+                    <td>${localPlayer.nickname} (Ви)</td>
+                    <td>${localPlayer.score}</td>
+                    <td>${correctAnswers}</td>
+                    <td>${wrongAnswers}</td>
+                </tr>
+            `;
+            
+            const mistakes = currentMatch.questions.filter(q => q.playerAnswered && !q.playerAnswerCorrect);
+            if (mistakes.length > 0) {
+                mistakesContainerEl.style.display = 'block';
+                mistakesListEl.innerHTML = '';
+                mistakes.forEach(q => {
+                    const li = document.createElement('li');
+                    const playerChoiceText = q.options[q.playerChosenIndex] || "Пропущено"; // Need to store playerChosenIndex
+                    li.innerHTML = `<strong>Питання:</strong> ${q.questionText}<br>
+                                    <span class="user-answer">Ваша відповідь: ${playerChoiceText}</span><br>
+                                    <span class="correct-answer-info">Правильно: ${q.options[q.correctIndex]}</span>`;
+                    mistakesListEl.appendChild(li);
+                });
+            } else {
+                mistakesContainerEl.style.display = 'none';
+            }
+            rematchBtn.textContent = "Грати ще раз (Соло)"; // Change button text for solo
+            addMatchToHistory(true, localPlayer.score, correctAnswers, currentMatch.totalQuestionsInMatch);
+        }
+
+        // --- 8. Result Modal & Reset ---
+        function showResultModal(resultsDataArray, mistakesDataArray = []) {
+             clearInterval(questionTimerInterval);
+             clearInterval(matchTimerInterval);
+             resultModalTitleEl.textContent = "Результати Раунду";
+             screens.match.classList.remove('active');
+             screens.resultModal.style.display = 'flex';
+
+             resultTableBodyEl.innerHTML = '';
+             resultsDataArray.forEach(playerResult => {
+                 const row = resultTableBodyEl.insertRow();
+                 row.insertCell().textContent = playerResult.nickname + (playerResult.playerId === localPlayer.id ? " (Ви)" : "");
+                 row.insertCell().textContent = playerResult.score;
+                 row.insertCell().textContent = playerResult.correctCount;
+                 row.insertCell().textContent = playerResult.wrongCount;
+             });
+             
+             // Display mistakes for the local player
+            const localPlayerMistakes = mistakesDataArray.filter(m => m.playerId === localPlayer.id);
+            if (localPlayerMistakes.length > 0) {
+                mistakesContainerEl.style.display = 'block';
+                mistakesListEl.innerHTML = '';
+                localPlayerMistakes.forEach(mistake => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `<strong>Питання:</strong> ${mistake.questionText}<br>
+                                    <span class="user-answer">Ваша відповідь: ${mistake.chosenOptionText}</span><br>
+                                    <span class="correct-answer-info">Правильно: ${mistake.correctOptionText}</span>`;
+                    mistakesListEl.appendChild(li);
+                });
+            } else {
+                mistakesContainerEl.style.display = 'none';
+            }
+             rematchBtn.textContent = "Реванш";
+        }
+
+        function resetGameToLobby(optionalMessage = "Ви повернулись в лоббі.") {
+            // Reset game state variables
+            currentRoom = { id: null, name: "", passwordProtected: false, topic: "all_ukraine_history", mode: "basic", lives: 3, players: [] };
+            currentMatch = { questions: [], currentQuestionIndex: -1, totalQuestionsInMatch: 0, isSolo: false };
+            localPlayer.score = 0;
+            localPlayer.lives = (currentRoom.lives || 3); // Reset to default or room setting
+            localPlayer.isHost = false;
+            localPlayer.answeredThisQuestion = false;
+            opponentPlayer = null;
+            selectedRoomToJoinId = null;
+
+
+            clearInterval(questionTimerInterval);
+            clearInterval(matchTimerInterval);
+            clearInterval(countdownInterval);
+            clearTimeout(waitingTimeout);
+            
+            // Reset UI elements
+            screens.resultModal.style.display = 'none';
+            screens.match.classList.remove('active');
+            screens.waiting.classList.remove('active');
+            screens.createRoom.classList.remove('active');
+            screens.joinRoom.classList.remove('active');
+            screens.soloSettings.classList.remove('active');
+            screens.lobby.classList.add('active'); // Go to lobby
+
+            waitingRoomIdDisplay.textContent = '';
+            waitingPlayersListEl.innerHTML = '';
+            waitingStatusTextEl.textContent = 'Очікуємо другого гравця...';
+            waitingCountdownEl.style.display = 'none';
+            joinSelectedRoomForm.style.display = 'none';
+
+
+            if(optionalMessage) showStatus(optionalMessage, "info");
+        }
+
+
+        // --- 9. Event Listeners Setup ---
+        function setupEventListeners() {
+            // Profile
+            profileBtn.addEventListener('click', () => {
+                profileDropdown.classList.toggle('active');
+            });
+            logoutBtn.addEventListener('click', () => {
+                if(ws && ws.readyState === WebSocket.OPEN) ws.close();
+                localStorage.removeItem('blitzDatesUserProfile'); // Clear all profile for full logout
+                localPlayer.nickname = "Гість";
+                localPlayer.stats = { totalScore: 0, roundsPlayed: 0, correctAnswersSum: 0, totalQuestionsAnsweredSum: 0, matchHistory: [] };
+                mainNicknameInput.value = "";
+                updateProfileUI();
+                profileDropdown.classList.remove('active');
+                resetGameToLobby("Ви вийшли. Введіть новий нікнейм.");
+                switchScreen('nickname');
+            });
+            document.addEventListener('click', (event) => { // Close dropdown if clicked outside
+                if (!profileBtn.contains(event.target) && !profileDropdown.contains(event.target) && profileDropdown.classList.contains('active')) {
+                    profileDropdown.classList.remove('active');
+                }
+            });
+
+
+            // Nickname Screen
+            continueToLobbyBtn.addEventListener('click', () => {
+                const nick = mainNicknameInput.value.trim();
+                if (!nick) {
+                    showStatus("Будь ласка, введіть нікнейм.", "error"); return;
+                }
+                localPlayer.nickname = nick;
+                saveProfile(); // Save nickname
+                updateProfileUI(); // Update header profile button
+                switchScreen('lobby');
+            });
+             wsAddressInputGlobal.addEventListener('change', () => {
+                localStorage.setItem('blitzDatesWSAddress', wsAddressInputGlobal.value.trim());
+                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                    ws.close();
+                    showStatus("Адресу сервера змінено. З'єднання розірвано. Повторіть спробу підключення.", "info");
+                }
+            });
+
+
+            // Lobby Screen
+            showCreateRoomScreenBtn.addEventListener('click', () => switchScreen('createRoom'));
+            showJoinRoomScreenBtn.addEventListener('click', () => {
+                switchScreen('joinRoom');
+                // Request room list from server (if connected)
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    sendToServer({ type: 'get_room_list' });
+                    roomListContainer.innerHTML = '<p>Завантаження списку кімнат...</p>';
+                } else {
+                    roomListContainer.innerHTML = '<p>Немає з\'єднання з сервером для отримання списку кімнат.</p>';
+                }
+                joinSelectedRoomForm.style.display = 'none'; // Hide details form until a room is selected
+            });
+            startSoloGameBtn.addEventListener('click', () => switchScreen('soloSettings'));
+
+            // Create Room
+            submitCreateRoomBtn.addEventListener('click', () => {
+                if (!localPlayer.nickname || localPlayer.nickname === "Гість") {
+                    showStatus("Будь ласка, спочатку введіть нікнейм на головному екрані.", "error");
+                    switchScreen('nickname'); return;
+                }
+                if (!connectWebSocket()) return; // Ensure connection before sending
+
+                const roomName = createRoomNameInput.value.trim();
+                if (!roomName) { showStatus("Назва кімнати обов'язкова!", "error"); return; }
+                
+                sendToServer({
+                    type: 'create_room',
+                    nickname: localPlayer.nickname,
+                    roomName: roomName,
+                    password: createRoomPasswordInput.value, // Server handles empty string as no password
+                    topic: createRoomTopicSelect.value,
+                    mode: createGameModeSelect.value,
+                    lives: parseInt(createLivesCountSelect.value)
+                });
+            });
+
+            // Join Room
+            submitJoinRoomBtn.addEventListener('click', () => {
+                 if (!localPlayer.nickname || localPlayer.nickname === "Гість") {
+                    showStatus("Будь ласка, спочатку введіть нікнейм.", "error");
+                    switchScreen('nickname'); return;
+                }
+                if (!selectedRoomToJoinId) { showStatus("Будь ласка, оберіть кімнату зі списку.", "error"); return; }
+                if (!connectWebSocket()) return;
+
+                sendToServer({
+                    type: 'join_room',
+                    nickname: localPlayer.nickname,
+                    roomId: selectedRoomToJoinId,
+                    password: joinRoomPasswordInput.value
+                });
+            });
+            
+            // Solo Settings
+            submitStartSoloGameBtn.addEventListener('click', startSoloGame);
+
+            // Waiting Screen
+            cancelWaitingBtn.addEventListener('click', () => {
+                if (localPlayer.isHost && currentRoom.id) {
+                    sendToServer({type: 'close_room', roomId: currentRoom.id, playerId: localPlayer.id});
+                } else if (currentRoom.id) { // Guest leaving before start
+                     sendToServer({type: 'leave_room', roomId: currentRoom.id, playerId: localPlayer.id});
+                }
+                resetGameToLobby("Створення/очікування кімнати скасовано.");
+            });
+
+            // Match Screen
+            leaveMatchBtn.addEventListener('click', () => {
+                if (confirm("Ви впевнені, що хочете покинути матч?")) {
+                    if (!currentMatch.isSolo && currentRoom.id) {
+                        sendToServer({ type: 'leave_room', playerId: localPlayer.id, roomId: currentRoom.id });
+                    }
+                    resetGameToLobby(currentMatch.isSolo ? "Соло-гру завершено достроково." : "Ви покинули матч.");
+                }
+            });
+
+            // Result Modal
+            rematchBtn.addEventListener('click', () => {
+                if (currentMatch.isSolo) {
+                    screens.resultModal.style.display = 'none';
+                    switchScreen('soloSettings'); // Go back to solo settings
+                } else if (currentRoom.id) {
+                    sendToServer({ type: 'rematch_request', roomId: currentRoom.id, playerId: localPlayer.id });
+                    screens.resultModal.style.display = 'none';
+                    showStatus("Запит на реванш відправлено. Очікуйте...", "info");
+                    // Client will return to waiting screen or new match_started from server
+                }
+            });
+            exitToLobbyFromModalBtn.addEventListener('click', () => {
+                if (!currentMatch.isSolo && currentRoom.id) { // Inform server if it was a multiplayer match
+                     sendToServer({ type: 'leave_room', playerId: localPlayer.id, roomId: currentRoom.id });
+                }
+                resetGameToLobby();
+            });
+        }
+
+        // --- 10. Initialization ---
+        window.onload = () => {
+            loadProfile(); // Load nickname and stats
+            setupEventListeners();
+            const savedWSAddress = localStorage.getItem('blitzDatesWSAddress');
+            if (savedWSAddress) wsAddressInputGlobal.value = savedWSAddress;
+            
+            if (localPlayer.nickname && localPlayer.nickname !== "Гість") {
+                switchScreen('lobby'); // If nickname exists, go to lobby
+            } else {
+                switchScreen('nickname'); // Else, start with nickname input
+            }
+        };
+
+    </script>
+</body>
+</html>
